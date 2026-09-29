@@ -1,4 +1,4 @@
-name: Deploy PPS Web Production
+name: Deploy PPS Web
 
 on:
   push:
@@ -8,31 +8,54 @@ on:
 jobs:
   deploy:
     name: Deploy PPS Web
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Checkout production
         uses: actions/checkout@v4
 
-      - name: Copy source to server
-        uses: appleboy/scp-action@v1.0.0
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          source: "."
-          target: "/home/api/pps_web"
+      - name: Deploy Docker
+        shell: bash
+        run: |
+          set -e
 
-      - name: Build and restart Docker
-        uses: appleboy/ssh-action@v1.2.2
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          script: |
-            cd /home/api/pps_web
+          echo "=== Deploy PPS Web ==="
 
-            docker compose build
-            docker compose up -d
+          cd /home/api/pps_web
 
-            docker image prune -f
+          echo "=== Copy source ==="
+
+          rsync -av --delete \
+            --exclude='.env' \
+            --exclude='.env.local' \
+            --exclude='.git/' \
+            --exclude='.next/' \
+            --exclude='node_modules/' \
+            --exclude='*.tsbuildinfo' \
+            "$GITHUB_WORKSPACE/" \
+            /home/api/pps_web/
+
+          echo "=== Check production environment ==="
+
+          if [ ! -f /home/api/pps_web/.env ]; then
+            echo "ERROR: /home/api/pps_web/.env tidak ditemukan!"
+            exit 1
+          fi
+
+          echo "=== Build Docker ==="
+
+          docker compose build
+
+          echo "=== Start PPS Web ==="
+
+          docker compose up -d
+
+          echo "=== Cleanup old images ==="
+
+          docker image prune -f
+
+          echo "=== Container status ==="
+
+          docker ps --filter "name=pps-web"
+
+          echo "=== Deployment completed ==="
