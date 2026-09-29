@@ -1,4 +1,4 @@
-import { apiFetch, apiFetchAuth, ApiRequestError } from "@/services/api";
+import { getBackendBaseUrl, apiFetch, apiFetchAuth, ApiRequestError } from "@/services/api";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -1664,7 +1664,7 @@ export async function fetchOutputLabelPdfBase64(
   noLabel: string,
 ): Promise<string> {
   const t = requireToken(token);
-  const base = process.env.BACKEND_API_URL ?? "http://localhost:5002";
+  const base = getBackendBaseUrl();
   const path = `/api/labels/${LABEL_PATH[category]}/${encodeURIComponent(noLabel)}/pdf`;
   let response: Response;
   try {

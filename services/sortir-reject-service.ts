@@ -1,4 +1,4 @@
-import { apiFetchAuth, ApiRequestError } from "@/services/api";
+import { getBackendBaseUrl, apiFetchAuth, ApiRequestError } from "@/services/api";
 
 export type SrOutputType = "barangJadi" | "reject";
 
@@ -481,7 +481,7 @@ export async function fetchSrLabelPdfBase64(
   target: SrPrintTarget,
 ): Promise<string> {
   const t = requireToken(token);
-  const base = process.env.BACKEND_API_URL ?? "http://localhost:5002";
+  const base = getBackendBaseUrl();
   const path = `/api/labels/${target.kind}/${encodeURIComponent(target.noLabel)}/pdf`;
   let response: Response;
   try {

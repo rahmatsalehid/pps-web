@@ -1,10 +1,16 @@
-const BASE_URL = process.env.BACKEND_API_URL ?? "http://localhost:5002";
-
 export class ApiRequestError extends Error {
   constructor(message: string, options?: { cause?: unknown }) {
     super(message, options);
     this.name = "ApiRequestError";
   }
+}
+
+export function getBackendBaseUrl(): string {
+  const url = process.env.BACKEND_API_URL;
+  if (!url) {
+    throw new ApiRequestError("BACKEND_API_URL belum diatur di .env.local");
+  }
+  return url;
 }
 
 export type ApiResult<T> = {
@@ -16,10 +22,11 @@ export async function apiFetch<T>(
   path: string,
   init?: RequestInit,
 ): Promise<ApiResult<T>> {
+  const baseUrl = getBackendBaseUrl();
   let response: Response;
 
   try {
-    response = await fetch(`${BASE_URL}/api${path}`, {
+    response = await fetch(`${baseUrl}/api${path}`, {
       ...init,
       headers: {
         "Content-Type": "application/json",
@@ -45,10 +52,11 @@ export async function apiFetchAuth<T>(
   token: string,
   init?: RequestInit,
 ): Promise<ApiResult<T>> {
+  const baseUrl = getBackendBaseUrl();
   let response: Response;
 
   try {
-    response = await fetch(`${BASE_URL}/api${path}`, {
+    response = await fetch(`${baseUrl}/api${path}`, {
       ...init,
       headers: {
         "Content-Type": "application/json",

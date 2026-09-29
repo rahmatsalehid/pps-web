@@ -1,4 +1,4 @@
-import { apiFetch, apiFetchAuth, ApiRequestError } from "@/services/api";
+import { getBackendBaseUrl, apiFetch, apiFetchAuth, ApiRequestError } from "@/services/api";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -1075,7 +1075,7 @@ async function fetchPdfBase64(
   token: string,
   path: string,
 ): Promise<string> {
-  const base = process.env.BACKEND_API_URL ?? "http://localhost:5002";
+  const base = getBackendBaseUrl();
   let response: Response;
   try {
     response = await fetch(`${base}${path}`, {

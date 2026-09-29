@@ -1,4 +1,4 @@
-import { apiFetchAuth, ApiRequestError } from "@/services/api";
+import { getBackendBaseUrl, apiFetchAuth, ApiRequestError } from "@/services/api";
 
 export type PbpTim = {
   idTim: number;
@@ -412,7 +412,7 @@ export async function fetchPbpLabelPdfBase64(
   noBahanPendukung: string,
 ): Promise<string> {
   const t = requireToken(token);
-  const base = process.env.BACKEND_API_URL ?? "http://localhost:5002";
+  const base = getBackendBaseUrl();
   const path = `/api/labels/bahan-pendukung/${encodeURIComponent(noBahanPendukung)}/pdf`;
   let response: Response;
   try {
