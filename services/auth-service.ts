@@ -58,7 +58,7 @@ export type LoginUser = {
 };
 
 export type LoginResponse =
-  | { success: true; message: string; token: string; user: LoginUser }
+  | { success: true; message: string; token?: string; user?: LoginUser }
   | {
       success: false;
       errorType: LoginErrorType;

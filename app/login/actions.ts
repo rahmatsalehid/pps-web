@@ -83,15 +83,28 @@ export async function loginAction(
     };
   }
 
+  // Backend versi lama bisa tidak mengirim token/user (kontrak login2 berubah
+  // antar versi). Jangan set cookie kosong — kalau cookie "pps_token" kosong,
+  // semua modul akan gagal dengan "Tidak terautentikasi".
+  if (typeof data.token !== "string" || !data.token) {
+    return {
+      status: "error",
+      message:
+        "Login gagal: backend tidak mengirim token. Periksa versi pps-backend dan BACKEND_API_URL di .env.",
+    };
+  }
+
   // Backend tidak mengelola cookie/session sama sekali — token JWT hanya
   // dikembalikan lewat body JSON dan divalidasi via header Authorization
   // (lihat verify-token.js). Supaya token tidak pernah terpapar ke JS
   // client-side (rawan XSS), Next.js berperan sebagai BFF: token disimpan
   // di cookie httpOnly yang di-set di sini, bukan localStorage/sessionStorage.
+  // `secure` diaktifkan lewat COOKIE_SECURE=true (wajib saat diakses via
+  // HTTPS); default false karena server Docker diakses via HTTP.
   const cookieStore = await cookies();
   const cookieOptions = {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: process.env.COOKIE_SECURE === "true",
     sameSite: "lax" as const,
     path: "/",
     maxAge: TOKEN_MAX_AGE_SECONDS,
@@ -100,9 +113,9 @@ export async function loginAction(
   cookieStore.set(AUTH_TOKEN_COOKIE, data.token, cookieOptions);
 
   const sessionUser: SessionUser = {
-    username: data.user.username,
-    fullName: data.user.fullName,
-    uGroupName: data.user.uGroupName,
+    username: data.user?.username || username,
+    fullName: data.user?.fullName || username,
+    uGroupName: data.user?.uGroupName ?? null,
   };
   cookieStore.set(AUTH_USER_COOKIE, JSON.stringify(sessionUser), cookieOptions);
 
