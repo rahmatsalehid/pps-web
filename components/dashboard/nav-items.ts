@@ -86,7 +86,7 @@ const PIN_HILIR: NavItem[] = [
 const WAREHOUSE: NavItem[] = [
   { label: "Penjualan", href: "/warehouse/penjualan", icon: ShoppingCartIcon },
   { label: "Good Transfer", href: "/warehouse/good-transfer", icon: SwapIcon },
-  { label: "In Transit", href: "#", icon: SendIcon },
+  { label: "In Transit", href: "/warehouse/in-transit", icon: SendIcon },
   { label: "Retur v3", href: "/warehouse/retur-v3", icon: RotateCcwIcon },
   { label: "Penerimaan Trade In", href: "/warehouse/trade-in", icon: QrCodeIcon },
   { label: "Penerimaan Barang Dagang", href: "/warehouse/penerimaan-barang-dagang", icon: TruckIcon }
@@ -128,10 +128,10 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     title: "Operasional",
     items: [
-      { label: "Stock", href: "#", icon: BoxIcon },
+      { label: "Stock", href: "/operasional/stock", icon: BoxIcon },
       { label: "Bongkar Susun", href: "/operasional/bongkar-susun", icon: LayersIcon },
       { label: "Sortir Reject", href: "/operasional/sortir-reject", icon: ClipboardIcon },
-      { label: "Stock Opname", href: "#", icon: ClipboardListIcon },
+      { label: "Stock Opname", href: "/operasional/stock-opname", icon: ClipboardListIcon },
       { label: "Stock Opname (Old)", href: "#", icon: ArchiveIcon }
     ],
   },

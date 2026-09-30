@@ -259,6 +259,46 @@ export function resolveNavMeta(pathname: string): NavMeta {
     };
   }
 
+  // Stock per proses
+  if (path === "/operasional/stock" || path.startsWith("/operasional/stock/")) {
+    return {
+      title: "Stock",
+      subtitle: "Operasional",
+      crumbs: [
+        ROOT_CRUMB,
+        { label: "Operasional", href: path },
+        { label: "Stock", href: path },
+      ],
+    };
+  }
+
+  // Stock Opname v2: list / detail
+  if (path === "/operasional/stock-opname") {
+    return {
+      title: "Stock Opname",
+      subtitle: "Operasional",
+      crumbs: [
+        ROOT_CRUMB,
+        { label: "Operasional", href: path },
+        { label: "Stock Opname", href: path },
+      ],
+    };
+  }
+
+  const soDetail = /^\/operasional\/stock-opname\/(.+)$/.exec(path);
+  if (soDetail && soDetail[1]) {
+    const noStockOpname = decodeURIComponent(soDetail[1]);
+    return {
+      title: "Stock Opname",
+      subtitle: "Operasional",
+      crumbs: [
+        ROOT_CRUMB,
+        { label: "Stock Opname", href: "/operasional/stock-opname" },
+        { label: noStockOpname },
+      ],
+    };
+  }
+
   if (path === "/warehouse/penjualan" || path.startsWith("/warehouse/penjualan/")) {
     return {
       title: "Penjualan",
@@ -282,6 +322,18 @@ export function resolveNavMeta(pathname: string): NavMeta {
         ROOT_CRUMB,
         { label: "Warehouse", href: "/warehouse/penjualan" },
         { label: "Good Transfer", href: path },
+      ],
+    };
+  }
+
+  if (path === "/warehouse/in-transit" || path.startsWith("/warehouse/in-transit/")) {
+    return {
+      title: "In Transit",
+      subtitle: "Warehouse",
+      crumbs: [
+        ROOT_CRUMB,
+        { label: "Warehouse", href: "/warehouse/penjualan" },
+        { label: "In Transit", href: path },
       ],
     };
   }

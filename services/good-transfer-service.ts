@@ -354,3 +354,43 @@ export async function markGoodTransferKirim(
     throw new ApiRequestError(failMessage(res, "Gagal menandai kirim"));
   }
 }
+
+export type AcceptScanPayload = {
+  labelCode: string;
+  blokTujuan: string;
+  idLokasiTujuan: number;
+};
+
+export type AcceptScanResult = {
+  labelCode: string;
+  noTransfer: string;
+  kodeKategori: string;
+  remainingItems: number;
+  transferCompleted: boolean;
+};
+
+export async function acceptGoodTransferScan(
+  token: string | undefined,
+  payload: AcceptScanPayload,
+): Promise<AcceptScanResult> {
+  const t = requireToken(token);
+  const res = await apiFetchAuth<{
+    success?: boolean;
+    message?: string;
+    data?: Record<string, unknown>;
+  }>("/goods-transfer/accept-scan", t, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+  if (res.status < 200 || res.status >= 300) {
+    throw new ApiRequestError(failMessage(res, "Gagal menerima label"));
+  }
+  const d = res.data.data ?? {};
+  return {
+    labelCode: asString(d["labelCode"]) || payload.labelCode,
+    noTransfer: asString(d["noTransfer"]),
+    kodeKategori: asString(d["kodeKategori"]),
+    remainingItems: asInt(d["remainingItems"]),
+    transferCompleted: asBool(d["transferCompleted"]),
+  };
+}
