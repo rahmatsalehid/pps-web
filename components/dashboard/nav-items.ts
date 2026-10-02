@@ -121,7 +121,8 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: "Washing & Broker", href: "#", icon: DropletIcon, children: WASHING_BROK},
       { label: "Pin Hulu", href: "#", icon: FlaskIcon, children: PIN_HULU},
       { label: "Pin Hilir", href: "#", icon: CogIcon, children: PIN_HILIR},
-      { label: "Warehouse", href: "#", icon: WarehouseIcon, children: WAREHOUSE}
+      { label: "Warehouse", href: "#", icon: WarehouseIcon, children: WAREHOUSE},
+      { label: "SPK Produksi Barang Jadi", href: "/production/spk-barang-jadi", icon: ClipboardListIcon }
     ],
   },
 
