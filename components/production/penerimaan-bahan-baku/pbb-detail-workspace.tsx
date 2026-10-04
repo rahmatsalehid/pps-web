@@ -3,7 +3,11 @@
 import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import type { PbbDetail, PbbOutput } from "@/services/penerimaan-bahan-baku-service";
+import type {
+  PbbDetail,
+  PbbKodeKategori,
+  PbbOutput,
+} from "@/services/penerimaan-bahan-baku-service";
 import {
   completePbbAction,
   getPbbDetailAction,
@@ -11,14 +15,15 @@ import {
 import { CheckCircleIcon, Loader2Icon } from "@/components/dashboard/icons";
 import {
   CategoryIcon,
-  CloseIcon,
   InventoryIcon,
-  LabelIcon,
   ScaleIcon,
 } from "./pbb-icons";
 import { fmtQty, formatTanggalShort } from "./pbb-format";
 import { PbbConfirmDialog } from "./pbb-confirm-dialog";
 import { PbbStatusDialog } from "./pbb-status-dialog";
+import { PbbEntryDialog } from "./pbb-entry-dialog";
+import { PbbPalletDialog } from "./pbb-pallet-dialog";
+import { PbbLaporanDialog } from "./pbb-laporan-dialog";
 
 const PAKAI_COLOR = "#00695C";
 const PROSES_COLOR = "#0D47A1";
@@ -51,6 +56,9 @@ export function PbbDetailWorkspace({
   const [confirmComplete, setConfirmComplete] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [completeError, setCompleteError] = useState<string | null>(null);
+
+  const [laporanOpen, setLaporanOpen] = useState(false);
+  const [entryKategori, setEntryKategori] = useState<PbbKodeKategori | null>(null);
 
   const [statusDialog, setStatusDialog] =
     useState<StatusDialogState | null>(null);
@@ -136,6 +144,8 @@ export function PbbDetailWorkspace({
   }
 
   const { pakaiRows, prosesRows } = groupOutputs(detail.outputs);
+  const supplierOf = (noBahanBaku: string): number | null =>
+    detail.batches.find((b) => b.noBahanBaku === noBahanBaku)?.idSupplier ?? null;
 
   return (
     <div className="relative flex h-full min-h-0 flex-col bg-[#F3F4F6]">
@@ -149,6 +159,13 @@ export function PbbDetailWorkspace({
             {header.noPenerimaan}
           </p>
         </div>
+        <button
+          type="button"
+          onClick={() => setLaporanOpen(true)}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-bold text-gray-700 hover:bg-gray-50"
+        >
+          Laporan
+        </button>
         {isComplete ? (
           <span className="inline-flex items-center gap-1 rounded-lg bg-[#DCFCE7] px-2.5 py-1.5 text-xs font-bold text-[#16A34A]">
             <CheckCircleIcon className="h-3.5 w-3.5" /> Selesai
@@ -171,6 +188,12 @@ export function PbbDetailWorkspace({
             title="Bahan Baku Pakai"
             color={PAKAI_COLOR}
             rows={pakaiRows}
+            onInput={() => setEntryKategori("bahanbakupakai")}
+            inputLabel="+ Input Pakai"
+            noPenerimaan={noPenerimaan}
+            editable={!isComplete}
+            supplierOf={supplierOf}
+            onChanged={() => void reload()}
           />
         </div>
         <div
@@ -182,9 +205,34 @@ export function PbbDetailWorkspace({
             title="Bahan Baku Proses"
             color={PROSES_COLOR}
             rows={prosesRows}
+            onInput={() => setEntryKategori("bahanbaku")}
+            inputLabel="+ Input Proses"
+            noPenerimaan={noPenerimaan}
+            editable={!isComplete}
+            supplierOf={supplierOf}
+            onChanged={() => void reload()}
           />
         </div>
       </div>
+
+      {laporanOpen && (
+        <PbbLaporanDialog
+          noPenerimaan={noPenerimaan}
+          onClose={() => setLaporanOpen(false)}
+        />
+      )}
+
+      {entryKategori && (
+        <PbbEntryDialog
+          noPenerimaan={noPenerimaan}
+          kodeKategori={entryKategori}
+          onClose={() => setEntryKategori(null)}
+          onSaved={() => {
+            setEntryKategori(null);
+            void reload();
+          }}
+        />
+      )}
 
       {confirmComplete && (
         <PbbConfirmDialog
@@ -262,10 +310,22 @@ function LabelSection({
   title,
   color,
   rows,
+  onInput,
+  inputLabel,
+  noPenerimaan,
+  editable,
+  supplierOf,
+  onChanged,
 }: {
   title: string;
   color: string;
   rows: LabelRow[];
+  onInput: () => void;
+  inputLabel: string;
+  noPenerimaan: string;
+  editable: boolean;
+  supplierOf: (noBahanBaku: string) => number | null;
+  onChanged: () => void;
 }) {
   return (
     <>
@@ -291,16 +351,46 @@ function LabelSection({
                 key={`${row.noBahanBaku}-${row.noPallet}`}
                 row={row}
                 color={color}
+                noPenerimaan={noPenerimaan}
+                editable={editable}
+                idSupplier={supplierOf(row.noBahanBaku)}
+                onChanged={onChanged}
               />
             ))}
           </div>
         )}
       </div>
+      {editable && (
+        <div className="mt-2.5 flex shrink-0 justify-end">
+          <button
+            type="button"
+            onClick={onInput}
+            className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-bold text-white shadow-sm hover:brightness-95"
+            style={{ backgroundColor: color }}
+          >
+            {inputLabel}
+          </button>
+        </div>
+      )}
     </>
   );
 }
 
-function LabelTile({ row, color }: { row: LabelRow; color: string }) {
+function LabelTile({
+  row,
+  color,
+  noPenerimaan,
+  editable,
+  idSupplier,
+  onChanged,
+}: {
+  row: LabelRow;
+  color: string;
+  noPenerimaan: string;
+  editable: boolean;
+  idSupplier: number | null;
+  onChanged: () => void;
+}) {
   const [open, setOpen] = useState(false);
   const totalBerat = row.saks.reduce((sum, s) => sum + s.berat, 0);
 
@@ -330,9 +420,13 @@ function LabelTile({ row, color }: { row: LabelRow; color: string }) {
       </button>
 
       {open && (
-        <LabelSakDetailDialog
+        <PbbPalletDialog
+          noPenerimaan={noPenerimaan}
           row={row}
           color={color}
+          idSupplier={idSupplier}
+          editable={editable}
+          onChanged={onChanged}
           onClose={() => setOpen(false)}
         />
       )}
@@ -346,86 +440,5 @@ function MiniMetric({ icon, text }: { icon: ReactNode; text: string }) {
       <span className="shrink-0 text-gray-500">{icon}</span>
       {text}
     </span>
-  );
-}
-
-/** Dialog detail sak read-only — ala _LabelSakDetailDialog. */
-function LabelSakDetailDialog({
-  row,
-  color,
-  onClose,
-}: {
-  row: LabelRow;
-  color: string;
-  onClose: () => void;
-}) {
-  const totalBerat = row.saks.reduce((sum, s) => sum + s.berat, 0);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
-      <div className="flex max-h-[560px] w-full max-w-[480px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-        {/* Header */}
-        <div className="flex items-center gap-2.5 px-[18px] pb-3.5 pt-3.5">
-          <span
-            className="grid place-items-center rounded-lg p-1.5"
-            style={{ backgroundColor: `${color}1A`, color }}
-          >
-            <LabelIcon className="h-[17px] w-[17px]" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-bold text-[#1F2937]">
-              {row.namaJenisPlastik}
-            </p>
-            <p className="truncate text-[11px] text-gray-500">
-              {row.noBahanBaku}-{row.noPallet}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded p-1 text-[#9CA3AF] hover:bg-gray-100"
-            aria-label="Tutup"
-          >
-            <CloseIcon className="h-[18px] w-[18px]" />
-          </button>
-        </div>
-        <div className="h-px bg-[#E2E6EA]" />
-
-        {/* Grid sak */}
-        <div className="min-h-0 flex-1 overflow-y-auto p-3">
-          {row.saks.length === 0 ? (
-            <p className="py-6 text-center text-xs text-gray-400">
-              Belum ada sak
-            </p>
-          ) : (
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5">
-              {row.saks.map((s) => (
-                <SakDetailCard key={s.noSak} output={s} />
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="h-px bg-[#E2E6EA]" />
-        <div className="px-[18px] py-[11px]">
-          <p className="text-xs font-bold" style={{ color }}>
-            {`Total: ${row.saks.length} sak  \u00B7  ${fmtQty(totalBerat)} kg`}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SakDetailCard({ output }: { output: PbbOutput }) {
-  return (
-    <div className="flex min-h-[72px] flex-col items-center justify-center rounded-lg border border-[#A5D6A7] bg-[#E8F5E9] px-1 py-2">
-      <span className="text-[13px] font-extrabold text-[#00695C]">
-        Sak {output.noSak}
-      </span>
-      <span className="mt-0.5 text-[11px] font-semibold text-[#374151]">
-        {output.berat.toFixed(2)} kg
-      </span>
-    </div>
   );
 }

@@ -38,7 +38,23 @@ export type PbbOutput = {
   noSak: number;
   idJenisPlastik: number | null;
   namaJenisPlastik: string | null;
+  keterangan: string | null;
+  hasBeenPrinted: number;
+  /** hasil QC pallet (null = belum diisi) */
+  moisture: number | null;
+  meltingIndex: number | null;
+  elasticity: number | null;
+  tenggelam: number | null;
+  density: number | null;
+  density2: number | null;
+  density3: number | null;
+  /** berat tersimpan (setelah potongan) */
   berat: number;
+  /** berat asli timbangan; null untuk data dari tablet */
+  beratAct: number | null;
+  isLembab: boolean;
+  /** terisi bila sak sudah terpakai di proses lain */
+  dateUsage: string | null;
 };
 
 export type PbbDetail = {
@@ -98,12 +114,6 @@ function asStrOrNull(v: unknown): string | null {
   return s ? s : null;
 }
 
-function errMsg(e: unknown, fallback: string): string {
-  if (e instanceof ApiRequestError) return e.message;
-  if (e instanceof Error) return e.message.replace(/^Exception:\s*/, "");
-  return fallback;
-}
-
 async function expectOk(
   status: number,
   data: { success?: boolean; message?: string } | null,
@@ -112,7 +122,7 @@ async function expectOk(
   if (status >= 200 && status < 300 && (!data || data.success !== false)) {
     return;
   }
-  throw new ApiRequestError(errMsg(data, fallback));
+  throw new ApiRequestError(data?.message?.trim() || fallback);
 }
 
 function parseRiwayat(j: Record<string, unknown>): PbbRiwayat {
@@ -162,8 +172,26 @@ function parseOutput(j: Record<string, unknown>): PbbOutput {
     idJenisPlastik:
       j["IdJenisPlastik"] == null ? null : asInt(j["IdJenisPlastik"]),
     namaJenisPlastik: asStrOrNull(j["NamaJenisPlastik"]),
+    keterangan: asStrOrNull(j["Keterangan"]),
+    hasBeenPrinted: asInt(j["HasBeenPrinted"]),
+    moisture: asFloatOrNull(j["Moisture"]),
+    meltingIndex: asFloatOrNull(j["MeltingIndex"]),
+    elasticity: asFloatOrNull(j["Elasticity"]),
+    tenggelam: asFloatOrNull(j["Tenggelam"]),
+    density: asFloatOrNull(j["Density"]),
+    density2: asFloatOrNull(j["Density2"]),
+    density3: asFloatOrNull(j["Density3"]),
     berat: asFloat(j["Berat"]),
+    beratAct: asFloatOrNull(j["BeratAct"]),
+    isLembab: asBool(j["IsLembab"]),
+    dateUsage: asStrOrNull(j["DateUsage"]),
   };
+}
+
+function asFloatOrNull(v: unknown): number | null {
+  if (v == null || v === "") return null;
+  const n = asFloat(v, Number.NaN);
+  return Number.isFinite(n) ? n : null;
 }
 
 export async function fetchPbbTimStatus(
@@ -286,4 +314,242 @@ export async function completePbb(
     { method: "PATCH" },
   );
   await expectOk(res.status, res.data, "Gagal menandai selesai");
+}
+
+export type PbbKodeKategori = "bahanbaku" | "bahanbakupakai";
+
+export type PbbFormOptions = {
+  suppliers: { idSupplier: number; namaSupplier: string }[];
+  jenis: { idBB: number; nama: string }[];
+  maxSak: number;
+};
+
+/**
+ * Aturan potongan berat supplier (sama seperti form VB):
+ * - "tetap": persen tetap dari MstSupplier.Potongan
+ * - "acak": persen diundi bilangan bulat lower..upper lalu dibagi 10
+ */
+export type PbbPotongan =
+  | { mode: "tetap"; percent: number }
+  | { mode: "acak"; lower: number; upper: number };
+
+export type PbbSakPayload = {
+  noSak: number;
+  /** berat tersimpan (setelah potongan) */
+  berat: number;
+  /** berat asli timbangan */
+  beratAct: number;
+  isLembab: boolean;
+};
+
+export type PbbAddPalletsPayload = {
+  idSupplier: number;
+  noPlat: string;
+  kodeKategori: PbbKodeKategori;
+  pallets: {
+    idJenisPlastik: number;
+    keterangan: string | null;
+    saks: PbbSakPayload[];
+  }[];
+};
+
+export async function fetchPbbFormOptions(
+  token: string | undefined,
+  kodeKategori: PbbKodeKategori,
+): Promise<PbbFormOptions> {
+  const t = requireToken(token);
+  const res = await apiFetchAuth<{
+    success?: boolean;
+    message?: string;
+    data?: Record<string, unknown>;
+  }>(
+    `/penerimaan-bahan-baku/form-options?kodeKategori=${encodeURIComponent(kodeKategori)}`,
+    t,
+  );
+  await expectOk(res.status, res.data, "Gagal memuat opsi form");
+  const d = res.data.data ?? {};
+  const suppliers = Array.isArray(d["suppliers"]) ? d["suppliers"] : [];
+  const jenis = Array.isArray(d["jenis"]) ? d["jenis"] : [];
+  return {
+    suppliers: suppliers.map((r) => {
+      const j = r as Record<string, unknown>;
+      return { idSupplier: asInt(j["IdSupplier"]), namaSupplier: asStr(j["NamaSupplier"]) };
+    }),
+    jenis: jenis.map((r) => {
+      const j = r as Record<string, unknown>;
+      return { idBB: asInt(j["IdBB"]), nama: asStr(j["Nama"]) };
+    }),
+    maxSak: asInt(d["maxSak"]),
+  };
+}
+
+export async function fetchPbbPotongan(
+  token: string | undefined,
+  idSupplier: number,
+): Promise<PbbPotongan> {
+  const t = requireToken(token);
+  const res = await apiFetchAuth<{
+    success?: boolean;
+    message?: string;
+    data?: Record<string, unknown>;
+  }>(`/penerimaan-bahan-baku/potongan/${idSupplier}`, t);
+  await expectOk(res.status, res.data, "Gagal memuat aturan potongan supplier");
+  const d = res.data.data ?? {};
+  if (asStr(d["mode"]) === "tetap") {
+    return { mode: "tetap", percent: asFloat(d["percent"]) };
+  }
+  return { mode: "acak", lower: asInt(d["lower"]), upper: asInt(d["upper"]) };
+}
+
+export async function addPbbPallets(
+  token: string | undefined,
+  noPenerimaan: string,
+  payload: PbbAddPalletsPayload,
+): Promise<{ noBahanBaku: string }> {
+  const t = requireToken(token);
+  const res = await apiFetchAuth<{
+    success?: boolean;
+    message?: string;
+    data?: Record<string, unknown>;
+  }>(`/penerimaan-bahan-baku/${encodeURIComponent(noPenerimaan)}/pallets`, t, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+  await expectOk(res.status, res.data, "Gagal menyimpan pallet");
+  return { noBahanBaku: asStr(res.data.data?.["noBahanBaku"]) };
+}
+
+function palletPath(noPenerimaan: string, noBahanBaku: string, noPallet: number): string {
+  return `/penerimaan-bahan-baku/${encodeURIComponent(noPenerimaan)}/pallets/${encodeURIComponent(noBahanBaku)}/${noPallet}`;
+}
+
+export async function updatePbbPallet(
+  token: string | undefined,
+  noPenerimaan: string,
+  noBahanBaku: string,
+  noPallet: number,
+  payload: { idJenisPlastik: number; keterangan: string | null },
+): Promise<void> {
+  const t = requireToken(token);
+  const res = await apiFetchAuth<{ success?: boolean; message?: string }>(
+    palletPath(noPenerimaan, noBahanBaku, noPallet),
+    t,
+    { method: "PATCH", body: JSON.stringify(payload) },
+  );
+  await expectOk(res.status, res.data, "Gagal mengubah pallet");
+}
+
+export async function deletePbbPallet(
+  token: string | undefined,
+  noPenerimaan: string,
+  noBahanBaku: string,
+  noPallet: number,
+): Promise<void> {
+  const t = requireToken(token);
+  const res = await apiFetchAuth<{ success?: boolean; message?: string }>(
+    palletPath(noPenerimaan, noBahanBaku, noPallet),
+    t,
+    { method: "DELETE" },
+  );
+  await expectOk(res.status, res.data, "Gagal menghapus pallet");
+}
+
+export async function addPbbSaks(
+  token: string | undefined,
+  noPenerimaan: string,
+  noBahanBaku: string,
+  noPallet: number,
+  saks: { berat: number; beratAct: number; isLembab: boolean }[],
+): Promise<void> {
+  const t = requireToken(token);
+  const res = await apiFetchAuth<{ success?: boolean; message?: string }>(
+    `${palletPath(noPenerimaan, noBahanBaku, noPallet)}/saks`,
+    t,
+    { method: "POST", body: JSON.stringify({ saks }) },
+  );
+  await expectOk(res.status, res.data, "Gagal menambah sak");
+}
+
+export async function deletePbbSak(
+  token: string | undefined,
+  noPenerimaan: string,
+  noBahanBaku: string,
+  noPallet: number,
+  noSak: number,
+): Promise<void> {
+  const t = requireToken(token);
+  const res = await apiFetchAuth<{ success?: boolean; message?: string }>(
+    `${palletPath(noPenerimaan, noBahanBaku, noPallet)}/saks/${noSak}`,
+    t,
+    { method: "DELETE" },
+  );
+  await expectOk(res.status, res.data, "Gagal menghapus sak");
+}
+
+export type PbbQcPayload = {
+  Moisture: number | null;
+  MeltingIndex: number | null;
+  Elasticity: number | null;
+  Tenggelam: number | null;
+  Density: number | null;
+  Density2: number | null;
+  Density3: number | null;
+};
+
+/** PUT /labels/bahan-baku/:nobahanbaku/pallet/:nopallet — hasil QC pallet. */
+export async function updatePbbQc(
+  token: string | undefined,
+  noBahanBaku: string,
+  noPallet: number,
+  qc: PbbQcPayload,
+): Promise<void> {
+  const t = requireToken(token);
+  const res = await apiFetchAuth<{ success?: boolean; message?: string }>(
+    `/labels/bahan-baku/${encodeURIComponent(noBahanBaku)}/pallet/${noPallet}`,
+    t,
+    { method: "PUT", body: JSON.stringify({ header: qc }) },
+  );
+  await expectOk(res.status, res.data, "Gagal menyimpan hasil QC");
+}
+
+export type PbbLaporanRow = {
+  noBahanBaku: string;
+  dateCreate: string | null;
+  noPlat: string | null;
+  namaSupplier: string | null;
+  jenis: string | null;
+  noPallet: number;
+  kondisi: string;
+  jumlahSak: number;
+  beratTimbangan: number;
+  berat: number;
+};
+
+export async function fetchPbbLaporan(
+  token: string | undefined,
+  noPenerimaan: string,
+): Promise<PbbLaporanRow[]> {
+  const t = requireToken(token);
+  const res = await apiFetchAuth<{
+    success?: boolean;
+    message?: string;
+    data?: { perPallet?: unknown };
+  }>(`/penerimaan-bahan-baku/${encodeURIComponent(noPenerimaan)}/laporan`, t);
+  await expectOk(res.status, res.data, "Gagal memuat laporan");
+  const rows = Array.isArray(res.data.data?.perPallet) ? res.data.data.perPallet : [];
+  return rows.map((r) => {
+    const j = r as Record<string, unknown>;
+    return {
+      noBahanBaku: asStr(j["NoBahanBaku"]),
+      dateCreate: asStrOrNull(j["DateCreate"]),
+      noPlat: asStrOrNull(j["NoPlat"]),
+      namaSupplier: asStrOrNull(j["NamaSupplier"]),
+      jenis: asStrOrNull(j["Jenis"]),
+      noPallet: asInt(j["NoPallet"]),
+      kondisi: asStr(j["Kondisi"]),
+      jumlahSak: asInt(j["JumlahSak"]),
+      beratTimbangan: asFloat(j["BeratTimbangan"]),
+      berat: asFloat(j["Berat"]),
+    };
+  });
 }

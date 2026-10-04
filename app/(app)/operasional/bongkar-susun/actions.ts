@@ -13,6 +13,7 @@ import {
   fetchBsList,
   markBsLabelPrinted,
   releaseBsPrintLock,
+  type BsInputPartialPayload,
   type BsOutputPayload,
   type BsPrintTarget,
   type FetchBsListParams,
@@ -61,6 +62,7 @@ export async function getBsDetailAction(noBongkarSusun: string) {
 export async function createBongkarSusunAction(payload: {
   note: string;
   inputs: string[];
+  inputsPartial?: BsInputPartialPayload[];
   outputs: BsOutputPayload[];
 }) {
   try {

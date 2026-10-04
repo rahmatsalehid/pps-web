@@ -10,6 +10,8 @@ import {
   bsCategoryLabelWithCode,
   bsHasSaks,
   bsIsPcsCategory,
+  bsPartialUnit,
+  bsSupportsPartialInput,
   type BsLabelInfo,
 } from "@/services/bongkar-susun-service";
 import { CheckCircleIcon, Loader2Icon, QrCodeIcon, X } from "@/components/dashboard/icons";
@@ -38,12 +40,26 @@ const ACCEPTED_LABELS = [
   { prefix: "F", label: "Crusher" },
   { prefix: "BB", label: "Furniture WIP" },
   { prefix: "BA", label: "Barang Jadi" },
+  { prefix: "H", label: "Mixer" },
 ];
 
 export function BongkarSusunCreateWorkspace() {
   const router = useRouter();
-  const [inputs, setInputs] = useState<BsLabelInfo[]>([]);
+  const [rawInputs, setInputs] = useState<BsLabelInfo[]>([]);
+  // Qty partial per label (kategori: mixer, furniture WIP, barang jadi).
+  const [partialPcs, setPartialPcs] = useState<Record<string, number>>({});
+  const [partialTarget, setPartialTarget] = useState<BsLabelInfo | null>(null);
   const [outputs, setOutputs] = useState<BsOutputEntry[]>([]);
+  const inputs = useMemo(
+    () =>
+      rawInputs.map((l) => {
+        const p = partialPcs[l.labelCode];
+        return p != null && p < l.totalBerat
+          ? { ...l, totalBerat: p, isPartial: true }
+          : l;
+      }),
+    [rawInputs, partialPcs],
+  );
   const [scanOpen, setScanOpen] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -152,6 +168,11 @@ export function BongkarSusunCreateWorkspace() {
   );
 
   const removeInput = useCallback((labelCode: string) => {
+    setPartialPcs((prev) => {
+      const rest = { ...prev };
+      delete rest[labelCode];
+      return rest;
+    });
     setInputs((prev) => {
       const next = prev.filter((l) => l.labelCode !== labelCode);
       if (next.length === 0) setOutputs([]);
@@ -259,9 +280,21 @@ export function BongkarSusunCreateWorkspace() {
         if (isPcsCategory) return { idJenis: out.idJenis, pcs: Math.round(out.berat) };
         return { idJenis: out.idJenis, berat: out.berat };
       });
+      const partialInputs = inputs.filter(
+        (l) => bsSupportsPartialInput(l.category) && partialPcs[l.labelCode] != null,
+      );
       const res = await createBongkarSusunAction({
         note,
         inputs: inputs.map((l) => l.labelCode),
+        ...(partialInputs.length > 0 && {
+          inputsPartial: partialInputs.map((l) => ({
+            labelCode: l.labelCode,
+            qty:
+              l.category === "mixer"
+                ? Math.round(l.totalBerat * 1000) / 1000
+                : Math.round(l.totalBerat),
+          })),
+        }),
         outputs: outputsPayload,
       });
       setSubmitting(false);
@@ -272,7 +305,7 @@ export function BongkarSusunCreateWorkspace() {
       setNoteOpen(false);
       setSuccessNo(res.noBongkarSusun);
     },
-    [isBalanced, submitting, outputs, hasSaks, isGilingan, isPcsCategory, inputs],
+    [isBalanced, submitting, outputs, hasSaks, isGilingan, isPcsCategory, inputs, partialPcs],
   );
 
   const unitLabel = unit === "pcs" ? "Alokasi Pcs" : "Alokasi Berat";
@@ -286,6 +319,9 @@ export function BongkarSusunCreateWorkspace() {
             onRemove={removeInput}
             onScan={() => setScanOpen(true)}
             onSakDetail={(lbl) => setSakTarget(lbl)}
+            onPartial={(lbl) =>
+              setPartialTarget(rawInputs.find((r) => r.labelCode === lbl.labelCode) ?? null)
+            }
           />
         </section>
 
@@ -356,6 +392,27 @@ export function BongkarSusunCreateWorkspace() {
         />
       )}
 
+      {partialTarget && (
+        <BsPartialQtyDialog
+          label={partialTarget}
+          current={partialPcs[partialTarget.labelCode]}
+          onCancel={() => setPartialTarget(null)}
+          onConfirm={(qty) => {
+            const code = partialTarget.labelCode;
+            setPartialPcs((prev) => {
+              if (qty >= partialTarget.totalBerat) {
+                const rest = { ...prev };
+                delete rest[code];
+                return rest;
+              }
+              return { ...prev, [code]: qty };
+            });
+            // Output yang sudah dibuat bisa melebihi sisa baru — user menyesuaikan.
+            setPartialTarget(null);
+          }}
+        />
+      )}
+
       {sakTarget && (
         <BongkarSusunSakDialog
           labelCode={sakTarget.labelCode}
@@ -375,11 +432,13 @@ function InputsCard({
   onRemove,
   onScan,
   onSakDetail,
+  onPartial,
 }: {
   inputs: BsLabelInfo[];
   onRemove: (labelCode: string) => void;
   onScan: () => void;
   onSakDetail: (lbl: BsLabelInfo) => void;
+  onPartial: (lbl: BsLabelInfo) => void;
 }) {
   return (
     <div
@@ -433,6 +492,25 @@ function InputsCard({
                   {lbl.labelCode}
                 </p>
                 <p className="truncate text-[11px] text-gray-500">{lbl.namaJenis}</p>
+                {bsSupportsPartialInput(lbl.category) && lbl.isPartial && (
+                  <div className="mt-1.5 flex items-center gap-1.5">
+                    <span className="rounded-full bg-orange-100 px-1.5 py-0.5 text-[10px] font-extrabold text-orange-700">
+                      PARTIAL
+                    </span>
+                  </div>
+                )}
+                {bsSupportsPartialInput(lbl.category) && (
+                  <div className="mt-1.5 flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => onPartial(lbl)}
+                      className="rounded px-1.5 py-0.5 text-[10px] font-bold"
+                      style={{ backgroundColor: `${PRIMARY}14`, color: PRIMARY }}
+                    >
+                      Partial
+                    </button>
+                  </div>
+                )}
                 {lbl.saks.length > 0 && (
                   <div className="mt-1.5 flex items-center gap-1.5">
                     <span className="rounded bg-[#E3F2FD] px-1.5 py-0.5 text-[10px] font-semibold text-[#1565C0]">
@@ -719,6 +797,81 @@ function BsNoteDialog({
           >
             {busy && <Loader2Icon className="h-4 w-4 animate-spin" />}
             Submit
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BsPartialQtyDialog({
+  label,
+  current,
+  onCancel,
+  onConfirm,
+}: {
+  label: BsLabelInfo;
+  current: number | undefined;
+  onCancel: () => void;
+  onConfirm: (qty: number) => void;
+}) {
+  const unit = bsPartialUnit(label.category);
+  const isKg = unit === "kg";
+  const max = isKg
+    ? Math.round(label.totalBerat * 1000) / 1000
+    : Math.round(label.totalBerat);
+  const [value, setValue] = useState(String(current ?? max));
+  const qty = isKg ? parseFloat(value) : parseInt(value, 10);
+  const valid = Number.isFinite(qty) && qty > 0 && qty <= max;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
+      <div className="w-full max-w-[360px] overflow-hidden rounded-2xl bg-white p-5 shadow-2xl">
+        <p className="text-sm font-bold text-[#1A1D23]">Input Partial</p>
+        <p className="mt-0.5 text-[11px] text-gray-500">
+          {label.labelCode} • {label.namaJenis} • sisa {max} {unit}
+        </p>
+        <label className="mt-4 block">
+          <span className="mb-1 block text-xs font-medium text-gray-600">
+            {isKg ? "Berat yang dibongkar (kg)" : "Pcs yang dibongkar"}
+          </span>
+          <input
+            autoFocus
+            inputMode={isKg ? "decimal" : "numeric"}
+            value={value}
+            onChange={(e) =>
+              setValue(
+                e.target.value.replace(/[^0-9.]/g, "").replace(/\.(.*)\./g, ".$1"),
+              )
+            }
+            className="h-11 w-full rounded-xl border bg-[#F8F9FB] px-3 text-sm outline-none focus:border-[#1E6FD9] focus:ring-1 focus:ring-[#1E6FD9]"
+            style={{ borderColor: value && !valid ? "#F87171" : BORDER }}
+          />
+          {value && !valid && (
+            <span className="mt-1 block text-[11px] text-red-600">
+              {isKg
+                ? `Berat harus lebih dari 0 dan maksimal ${max} kg`
+                : `Pcs harus 1–${max}`}
+            </span>
+          )}
+        </label>
+        <div className="mt-4 flex gap-2.5">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="h-10 flex-1 rounded-xl border text-sm font-semibold text-gray-700 hover:bg-gray-50"
+            style={{ borderColor: BORDER }}
+          >
+            Batal
+          </button>
+          <button
+            type="button"
+            disabled={!valid}
+            onClick={() => onConfirm(qty)}
+            className="h-10 flex-1 rounded-xl text-sm font-bold text-white disabled:opacity-50"
+            style={{ backgroundColor: GREEN }}
+          >
+            Simpan
           </button>
         </div>
       </div>

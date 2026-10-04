@@ -56,6 +56,18 @@ export function bsIsPcsCategory(category: string | null | undefined): boolean {
   return category === "furnitureWip" || category === "barangJadi";
 }
 
+const BS_PARTIAL_CATEGORIES = new Set(["mixer", "furnitureWip", "barangJadi"]);
+
+export function bsSupportsPartialInput(
+  category: string | null | undefined,
+): boolean {
+  return category != null && BS_PARTIAL_CATEGORIES.has(category);
+}
+
+export function bsPartialUnit(category: string | null | undefined): "pcs" | "kg" {
+  return category === "mixer" ? "kg" : "pcs";
+}
+
 export function bsHasSaks(category: string | null | undefined): boolean {
   return (
     category === "washing" ||
@@ -121,9 +133,13 @@ export type BsDetail = {
 
 export type BsOutputPayload = Record<string, unknown>;
 
+/** Input partial kategori pcs/kg (furniture WIP / barang jadi / mixer): label + qty terpakai (pcs atau kg). */
+export type BsInputPartialPayload = { labelCode: string; qty: number };
+
 export type BsCreatePayload = {
   note: string;
   inputs: string[];
+  inputsPartial?: BsInputPartialPayload[];
   outputs: BsOutputPayload[];
 };
 
@@ -162,12 +178,6 @@ function asFloat(v: unknown, fallback = 0): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
-function errMsg(e: unknown, fallback: string): string {
-  if (e instanceof ApiRequestError) return e.message;
-  if (e instanceof Error) return e.message.replace(/^Exception:\s*/, "");
-  return fallback;
-}
-
 async function expectOk(
   status: number,
   data: { success?: boolean; message?: string } | null,
@@ -176,7 +186,7 @@ async function expectOk(
   if (status >= 200 && status < 300 && (!data || data.success !== false)) {
     return;
   }
-  throw new ApiRequestError(errMsg(data, fallback));
+  throw new ApiRequestError(data?.message?.trim() || fallback);
 }
 
 function parseSak(raw: unknown): BsSak {
