@@ -229,7 +229,6 @@ export function PbbEntryDialog({
       closeDisplay();
       return;
     }
-    openDisplay();
     try {
       const conn = new ScaleConnection(
         (kg) => {
@@ -243,7 +242,9 @@ export function PbbEntryDialog({
           closeDisplay();
         },
       );
-      await conn.connect();
+      const connecting = conn.connect();
+      openDisplay();
+      await connecting;
       scaleRef.current = conn;
       setScaleConnected(true);
       setScaleMessage(null);
@@ -531,6 +532,16 @@ export function PbbEntryDialog({
                     >
                       {scaleActive ? "Stop (berhenti baca otomatis)" : "Mulai (tambah sak otomatis)"}
                     </button>
+                    {scaleConnected && (
+                      <button
+                        type="button"
+                        onClick={() => openDisplay()}
+                        className="h-9 w-full rounded-lg border text-xs font-bold text-gray-700 hover:bg-gray-50"
+                        style={{ borderColor: BORDER }}
+                      >
+                        Tampilkan Display
+                      </button>
+                    )}
                     {scaleActive && (
                       <p className="rounded-lg bg-green-50 px-2.5 py-2 text-[11px] text-green-700">
                         Menunggu timbangan… setiap hasil timbang ditambahkan sebagai sak

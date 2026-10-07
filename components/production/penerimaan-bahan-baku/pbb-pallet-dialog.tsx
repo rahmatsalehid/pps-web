@@ -259,7 +259,6 @@ export function PbbPalletDialog({
       closeDisplay();
       return;
     }
-    openDisplay();
     try {
       const conn = new ScaleConnection(
         (kg) => {
@@ -273,7 +272,9 @@ export function PbbPalletDialog({
           closeDisplay();
         },
       );
-      await conn.connect();
+      const connecting = conn.connect();
+      openDisplay();
+      await connecting;
       scaleRef.current = conn;
       setScaleConnected(true);
       setScaleMessage(null);
@@ -372,20 +373,27 @@ export function PbbPalletDialog({
           {mode === "addSak" && (
             <div className="space-y-2.5 rounded-xl border p-3" style={{ borderColor: BORDER }}>
               {serialSupported ? (
-                <div className="grid grid-cols-2 gap-2">
-                  <button type="button" onClick={() => void toggleConnect()} className={`${btn} border`} style={{ borderColor: BORDER }}>
-                    {scaleConnected ? "Putuskan Timbangan" : "Hubungkan Timbangan"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setScaleActive((v) => !v)}
-                    disabled={!scaleConnected || !potongan}
-                    className={`${btn} text-white disabled:bg-gray-200 disabled:text-gray-400`}
-                    style={scaleConnected && potongan ? { backgroundColor: scaleActive ? "#DC2626" : color } : undefined}
-                  >
-                    {scaleActive ? "Stop" : "Mulai (otomatis)"}
-                  </button>
-                </div>
+                <>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button type="button" onClick={() => void toggleConnect()} className={`${btn} border`} style={{ borderColor: BORDER }}>
+                      {scaleConnected ? "Putuskan Timbangan" : "Hubungkan Timbangan"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setScaleActive((v) => !v)}
+                      disabled={!scaleConnected || !potongan}
+                      className={`${btn} text-white disabled:bg-gray-200 disabled:text-gray-400`}
+                      style={scaleConnected && potongan ? { backgroundColor: scaleActive ? "#DC2626" : color } : undefined}
+                    >
+                      {scaleActive ? "Stop" : "Mulai (otomatis)"}
+                    </button>
+                  </div>
+                  {scaleConnected && (
+                    <button type="button" onClick={() => openDisplay()} className={`${btn} w-full border`} style={{ borderColor: BORDER }}>
+                      Tampilkan Display
+                    </button>
+                  )}
+                </>
               ) : (
                 <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-[11px] text-amber-800">
                   {webSerialUnsupportedReason()} Berat tetap bisa diisi manual.
