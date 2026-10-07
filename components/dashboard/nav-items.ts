@@ -133,14 +133,14 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: "Bongkar Susun", href: "/operasional/bongkar-susun", icon: LayersIcon },
       { label: "Sortir Reject", href: "/operasional/sortir-reject", icon: ClipboardIcon },
       { label: "Stock Opname", href: "/operasional/stock-opname", icon: ClipboardListIcon },
-      { label: "Stock Opname (Old)", href: "#", icon: ArchiveIcon }
+      { label: "Stock Opname (Old)", href: "/operasional/stock-opname-old", icon: ArchiveIcon }
     ],
   },
 
   {
     title: "Laporan & Monitoring",
     items: [
-      { label: "Laporan", href: "#", icon: FileTextIcon },
+      { label: "Laporan", href: "/laporan", icon: FileTextIcon },
       { label: "History", href: "#", icon: HistoryIcon },
       { label: "Mapping", href: "/mapping", icon: MapIcon },
     ],
@@ -148,8 +148,11 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     title: "System",
     items: [
-      { label: "User", href: "#", icon: UsersIcon },
-      { label: "Role", href: "#", icon: ShieldIcon },
+      { label: "Master Operator & Regu", href: "/master/operator-regu", icon: UsersIcon },
+      { label: "Master Cetakan", href: "/master/cetakan", icon: LayersIcon },
+      { label: "Master Formula", href: "/master/formula", icon: ClipboardListIcon },
+      { label: "User", href: "/user", icon: UsersIcon },
+      { label: "Role", href: "/master/permission-group", icon: ShieldIcon },
       { label: "Permission", href: "#", icon: KeyIcon },
     ],
   },

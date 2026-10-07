@@ -398,6 +398,33 @@ export async function fetchBsLabelInfo(
   return parseBsLabelInfo(res.data.data);
 }
 
+/**
+ * Kategori pcs (mis. barang jadi) bisa punya baris di tabel input penuh DAN
+ * input partial untuk label yang sama. Total pcs untuk cek balance =
+ * input + input partial, jadi baris dengan labelCode sama dijumlahkan.
+ */
+function mergeBsInputsByLabel(inputs: BsLabelInfo[]): BsLabelInfo[] {
+  const merged = new Map<string, BsLabelInfo>();
+  const result: BsLabelInfo[] = [];
+  for (const inp of inputs) {
+    const prev =
+      bsIsPcsCategory(inp.category) && inp.labelCode
+        ? merged.get(inp.labelCode)
+        : undefined;
+    if (prev) {
+      prev.totalBerat += inp.totalBerat;
+      prev.isPartial = prev.isPartial || inp.isPartial;
+      continue;
+    }
+    const copy = { ...inp };
+    if (bsIsPcsCategory(inp.category) && inp.labelCode) {
+      merged.set(inp.labelCode, copy);
+    }
+    result.push(copy);
+  }
+  return result;
+}
+
 export async function fetchBsDetail(
   token: string | undefined,
   noBongkarSusun: string,
@@ -413,8 +440,8 @@ export async function fetchBsDetail(
   const data = res.data.data;
   if (!data) throw new ApiRequestError("Response tidak mengandung data transaksi");
   const header = (data["header"] ?? {}) as Record<string, unknown>;
-  const inputs = (Array.isArray(data["inputs"]) ? data["inputs"] : []).map(
-    parseBsLabelInfo,
+  const inputs = mergeBsInputsByLabel(
+    (Array.isArray(data["inputs"]) ? data["inputs"] : []).map(parseBsLabelInfo),
   );
   const outputs = (Array.isArray(data["outputs"]) ? data["outputs"] : []).map(
     parseBsOutputLabel,

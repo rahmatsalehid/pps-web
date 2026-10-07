@@ -299,6 +299,36 @@ export function resolveNavMeta(pathname: string): NavMeta {
     };
   }
 
+  // Stock Opname (Old): list / detail
+  if (path === "/operasional/stock-opname-old") {
+    return {
+      title: "Stock Opname (Old)",
+      subtitle: "Operasional",
+      crumbs: [
+        ROOT_CRUMB,
+        { label: "Operasional", href: path },
+        { label: "Stock Opname (Old)", href: path },
+      ],
+    };
+  }
+
+  const soOldDetail = /^\/operasional\/stock-opname-old\/(.+)$/.exec(path);
+  if (soOldDetail && soOldDetail[1]) {
+    const noStockOpname = decodeURIComponent(soOldDetail[1]);
+    return {
+      title: "Stock Opname (Old)",
+      subtitle: "Operasional",
+      crumbs: [
+        ROOT_CRUMB,
+        {
+          label: "Stock Opname (Old)",
+          href: "/operasional/stock-opname-old",
+        },
+        { label: noStockOpname },
+      ],
+    };
+  }
+
   if (path === "/warehouse/penjualan" || path.startsWith("/warehouse/penjualan/")) {
     return {
       title: "Penjualan",

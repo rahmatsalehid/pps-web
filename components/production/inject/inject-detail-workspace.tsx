@@ -58,6 +58,7 @@ import { ProductionFormDialog } from "./production-form-dialog";
 import {
   CheckCircleIcon,
   ClipboardIcon,
+  FileTextIcon,
   HistoryIcon,
   Loader2Icon,
   LockIcon,
@@ -558,6 +559,14 @@ export function InjectDetailWorkspace({
     setRiwayatLoading(false);
     if (res.ok) setRiwayatItems(res.items);
     else showSnack(res.error, "#dc2626");
+  }
+
+  function openReportPdf() {
+    window.open(
+      `/production/inject/${encodeURIComponent(noProduksi)}/laporan/pdf`,
+      "_blank",
+      "noopener",
+    );
   }
 
   // -- Toolbar actions --------------------------------------------------------
@@ -1308,6 +1317,14 @@ export function InjectDetailWorkspace({
               <HistoryIcon className="h-3.5 w-3.5" /> Riwayat
             </button>
           )}
+          <button
+            type="button"
+            onClick={openReportPdf}
+            className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+            title="Buka laporan hasil produksi harian (PDF)"
+          >
+            <FileTextIcon className="h-3.5 w-3.5" /> Laporan
+          </button>
 
           {canLock && header && isLockedOrComplete && header.isComplete && (
             <button

@@ -35,6 +35,7 @@ import {
 } from "./washing-input-label-dialog";
 import {
   CheckCircleIcon,
+  FileTextIcon,
   FlaskIcon,
   HistoryIcon,
   Loader2Icon,
@@ -417,6 +418,14 @@ export function WashingDetailWorkspace({
   }
 
   // ── Toolbar actions ────────────────────────────────────────────────────────
+
+  function openReportPdf() {
+    window.open(
+      `/production/washing/${encodeURIComponent(noProduksi)}/laporan/pdf`,
+      "_blank",
+      "noopener",
+    );
+  }
 
   async function handleComplete() {
     setActionBusy(true);
@@ -1046,6 +1055,14 @@ export function WashingDetailWorkspace({
               <HistoryIcon className="h-3.5 w-3.5" /> Riwayat
             </button>
           )}
+          <button
+            type="button"
+            onClick={openReportPdf}
+            className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+            title="Buka laporan hasil produksi harian (PDF)"
+          >
+            <FileTextIcon className="h-3.5 w-3.5" /> Laporan
+          </button>
 
           {canLock && header && isLockedOrComplete && header.isComplete && (
             <button
