@@ -23,6 +23,7 @@ import { Loader2Icon } from "@/components/dashboard/icons";
 import { CloseIcon, LabelIcon } from "./pbb-icons";
 import { applyPotongan, fmt } from "./pbb-potongan";
 import { ScaleConnection, isWebSerialSupported, webSerialUnsupportedReason } from "./pbb-scale";
+import { useScaleDisplay, type DisplayState } from "./pbb-display";
 
 const BORDER = "#E2E6EA";
 
@@ -56,6 +57,8 @@ export function PbbPalletDialog({
   row,
   color,
   idSupplier,
+  supplierName,
+  totals,
   editable,
   onClose,
   onChanged,
@@ -64,6 +67,12 @@ export function PbbPalletDialog({
   row: PbbPalletView;
   color: string;
   idSupplier: number | null;
+  supplierName: string | null;
+  totals: {
+    jmlhPallet: number;
+    jmlhSak: number;
+    jmlhKg: number;
+  } | null;
   /** false bila penerimaan sudah selesai */
   editable: boolean;
   onClose: () => void;
@@ -98,7 +107,40 @@ export function PbbPalletDialog({
   const [scaleConnected, setScaleConnected] = useState(false);
   const [scaleActive, setScaleActive] = useState(false);
   const [scaleMessage, setScaleMessage] = useState<string | null>(null);
+  const [lastKg, setLastKg] = useState<number | null>(null);
   const serialSupported = useMemo(() => isWebSerialSupported(), []);
+
+  const displayState = useMemo<DisplayState>(
+    () => ({
+      supplier: supplierName ?? "",
+      noPenerimaan,
+      palletKe: row.noPallet,
+      jmlhPallet: totals?.jmlhPallet ?? 1,
+      jmlhSak: totals?.jmlhSak ?? row.saks.length,
+      jmlhKg: totals?.jmlhKg ?? totalBerat,
+      saks: row.saks.map((s) => ({
+        noSak: s.noSak,
+        jam: "-",
+        berat: s.berat,
+        kondisi: s.isLembab ? "LEMBAB" : "KERING",
+      })),
+      weight: lastKg,
+      connected: scaleConnected,
+      active: scaleActive,
+    }),
+    [
+      supplierName,
+      noPenerimaan,
+      row,
+      totals,
+      totalBerat,
+      lastKg,
+      scaleConnected,
+      scaleActive,
+    ],
+  );
+
+  const { openDisplay, closeDisplay } = useScaleDisplay(displayState);
 
   // QC
   const [qc, setQc] = useState<Record<string, string>>(() => {
@@ -175,6 +217,7 @@ export function PbbPalletDialog({
   async function addSakValue(act: number) {
     if (!(act > 0)) return setError("Berat tidak valid");
     if (!potongan) return setError("Aturan potongan supplier belum dimuat");
+    setLastKg(act);
     const berat = applyPotongan(act, potongan);
     await run(
       () => addPbbSaksAction(noPenerimaan, row.noBahanBaku, row.noPallet, [{ berat, beratAct: act, isLembab }]),
@@ -213,17 +256,21 @@ export function PbbPalletDialog({
       scaleRef.current = null;
       setScaleConnected(false);
       setScaleActive(false);
+      closeDisplay();
       return;
     }
+    openDisplay();
     try {
       const conn = new ScaleConnection(
         (kg) => {
+          setLastKg(kg);
           if (scaleActiveRef.current && !busyRef.current) void addSakRef.current(kg);
         },
         (err) => {
           setScaleConnected(false);
           setScaleActive(false);
           setScaleMessage(err ? `Timbangan terputus: ${err}` : "Timbangan terputus");
+          closeDisplay();
         },
       );
       await conn.connect();
@@ -231,6 +278,7 @@ export function PbbPalletDialog({
       setScaleConnected(true);
       setScaleMessage(null);
     } catch (e) {
+      closeDisplay();
       setScaleMessage(e instanceof Error ? e.message : "Gagal menghubungkan timbangan");
     }
   }

@@ -41,6 +41,14 @@ type LabelRow = {
   saks: PbbOutput[];
 };
 
+type BbMeta = {
+  idSupplier: number | null;
+  namaSupplier: string | null;
+  jmlhPallet: number;
+  jmlhSak: number;
+  jmlhKg: number;
+};
+
 export function PbbDetailWorkspace({
   noPenerimaan,
   initialDetail,
@@ -144,8 +152,18 @@ export function PbbDetailWorkspace({
   }
 
   const { pakaiRows, prosesRows } = groupOutputs(detail.outputs);
-  const supplierOf = (noBahanBaku: string): number | null =>
-    detail.batches.find((b) => b.noBahanBaku === noBahanBaku)?.idSupplier ?? null;
+  const metaOf = (noBahanBaku: string): BbMeta => {
+    const batch =
+      detail.batches.find((b) => b.noBahanBaku === noBahanBaku) ?? null;
+    const outs = detail.outputs.filter((o) => o.noBahanBaku === noBahanBaku);
+    return {
+      idSupplier: batch?.idSupplier ?? null,
+      namaSupplier: batch?.namaSupplier ?? null,
+      jmlhPallet: new Set(outs.map((o) => o.noPallet)).size,
+      jmlhSak: outs.length,
+      jmlhKg: outs.reduce((sum, o) => sum + o.berat, 0),
+    };
+  };
 
   return (
     <div className="relative flex h-full min-h-0 flex-col bg-[#F3F4F6]">
@@ -192,7 +210,7 @@ export function PbbDetailWorkspace({
             inputLabel="+ Input Pakai"
             noPenerimaan={noPenerimaan}
             editable={!isComplete}
-            supplierOf={supplierOf}
+            metaOf={metaOf}
             onChanged={() => void reload()}
           />
         </div>
@@ -209,7 +227,7 @@ export function PbbDetailWorkspace({
             inputLabel="+ Input Proses"
             noPenerimaan={noPenerimaan}
             editable={!isComplete}
-            supplierOf={supplierOf}
+            metaOf={metaOf}
             onChanged={() => void reload()}
           />
         </div>
@@ -314,7 +332,7 @@ function LabelSection({
   inputLabel,
   noPenerimaan,
   editable,
-  supplierOf,
+  metaOf,
   onChanged,
 }: {
   title: string;
@@ -324,7 +342,7 @@ function LabelSection({
   inputLabel: string;
   noPenerimaan: string;
   editable: boolean;
-  supplierOf: (noBahanBaku: string) => number | null;
+  metaOf: (noBahanBaku: string) => BbMeta;
   onChanged: () => void;
 }) {
   return (
@@ -353,7 +371,7 @@ function LabelSection({
                 color={color}
                 noPenerimaan={noPenerimaan}
                 editable={editable}
-                idSupplier={supplierOf(row.noBahanBaku)}
+                meta={metaOf(row.noBahanBaku)}
                 onChanged={onChanged}
               />
             ))}
@@ -381,14 +399,14 @@ function LabelTile({
   color,
   noPenerimaan,
   editable,
-  idSupplier,
+  meta,
   onChanged,
 }: {
   row: LabelRow;
   color: string;
   noPenerimaan: string;
   editable: boolean;
-  idSupplier: number | null;
+  meta: BbMeta;
   onChanged: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -424,7 +442,13 @@ function LabelTile({
           noPenerimaan={noPenerimaan}
           row={row}
           color={color}
-          idSupplier={idSupplier}
+          idSupplier={meta.idSupplier}
+          supplierName={meta.namaSupplier}
+          totals={{
+            jmlhPallet: meta.jmlhPallet,
+            jmlhSak: meta.jmlhSak,
+            jmlhKg: meta.jmlhKg,
+          }}
           editable={editable}
           onChanged={onChanged}
           onClose={() => setOpen(false)}

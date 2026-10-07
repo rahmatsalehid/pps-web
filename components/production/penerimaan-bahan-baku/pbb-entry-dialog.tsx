@@ -16,6 +16,7 @@ import { Loader2Icon } from "@/components/dashboard/icons";
 import { AddIcon, CloseIcon, ScaleIcon } from "./pbb-icons";
 import { PbbStatusDialog } from "./pbb-status-dialog";
 import { ScaleConnection, isWebSerialSupported, webSerialUnsupportedReason } from "./pbb-scale";
+import { nowClock, useScaleDisplay, type DisplayState } from "./pbb-display";
 import { applyPotongan, fmt } from "./pbb-potongan";
 
 const BORDER = "#E2E6EA";
@@ -67,6 +68,8 @@ export function PbbEntryDialog({
   const [scaleConnected, setScaleConnected] = useState(false);
   const [scaleActive, setScaleActive] = useState(false);
   const [scaleMessage, setScaleMessage] = useState<string | null>(null);
+  const [lastKg, setLastKg] = useState<number | null>(null);
+  const [sakTimes, setSakTimes] = useState<Record<string, string>>({});
   const serialSupported = useMemo(() => isWebSerialSupported(), []);
 
   useEffect(() => {
@@ -114,6 +117,46 @@ export function PbbEntryDialog({
     0,
   );
 
+  const displayState = useMemo<DisplayState>(() => {
+    const activeIdx = pallets.findIndex((p) => p.id === activeId);
+    const active = activeIdx >= 0 ? pallets[activeIdx] : null;
+    return {
+      supplier:
+        options?.suppliers.find((s) => s.idSupplier === idSupplier)
+          ?.namaSupplier ?? "",
+      noPenerimaan,
+      palletKe: activeIdx >= 0 ? activeIdx + 1 : 0,
+      jmlhPallet: pallets.length,
+      jmlhSak: totalSak,
+      jmlhKg: totalKg,
+      saks: active
+        ? active.saks.map((k) => ({
+            noSak: k.noSak,
+            jam: sakTimes[`${active.id}:${k.noSak}`] ?? "-",
+            berat: k.berat,
+            kondisi: k.isLembab ? "LEMBAB" : "KERING",
+          }))
+        : [],
+      weight: lastKg,
+      connected: scaleConnected,
+      active: scaleActive,
+    };
+  }, [
+    pallets,
+    activeId,
+    options,
+    idSupplier,
+    noPenerimaan,
+    totalSak,
+    totalKg,
+    sakTimes,
+    lastKg,
+    scaleConnected,
+    scaleActive,
+  ]);
+
+  const { openDisplay, closeDisplay } = useScaleDisplay(displayState);
+
   const addPallet = useCallback(() => {
     const id = nextPalletId.current++;
     setPallets((prev) => [...prev, { id, idJenis: 0, keterangan: "", saks: [] }]);
@@ -147,6 +190,15 @@ export function PbbEntryDialog({
         return false;
       }
       setFormError(null);
+      const noSakNext =
+        activePallet.saks.length === 0
+          ? 1
+          : Math.max(...activePallet.saks.map((s) => s.noSak)) + 1;
+      setSakTimes((prev) => ({
+        ...prev,
+        [`${activePallet.id}:${noSakNext}`]: nowClock(),
+      }));
+      setLastKg(beratAct);
       const berat = applyPotongan(beratAct, potongan);
       setPallets((prev) =>
         prev.map((p) => {
@@ -174,17 +226,21 @@ export function PbbEntryDialog({
       scaleRef.current = null;
       setScaleConnected(false);
       setScaleActive(false);
+      closeDisplay();
       return;
     }
+    openDisplay();
     try {
       const conn = new ScaleConnection(
         (kg) => {
+          setLastKg(kg);
           if (scaleActiveRef.current) addSakRef.current(kg);
         },
         (err) => {
           setScaleConnected(false);
           setScaleActive(false);
           setScaleMessage(err ? `Timbangan terputus: ${err}` : "Timbangan terputus");
+          closeDisplay();
         },
       );
       await conn.connect();
@@ -192,6 +248,7 @@ export function PbbEntryDialog({
       setScaleConnected(true);
       setScaleMessage(null);
     } catch (e) {
+      closeDisplay();
       setScaleMessage(e instanceof Error ? e.message : "Gagal menghubungkan timbangan");
     }
   }
