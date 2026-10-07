@@ -18,6 +18,22 @@ export function PbbDisplayView() {
     [],
   );
 
+  useEffect(() => {
+    const request = () => {
+      if (document.fullscreenElement) return;
+      void document.documentElement.requestFullscreen().catch(() => {
+        /* abaikan */
+      });
+    };
+    request();
+    document.addEventListener("pointerdown", request);
+    document.addEventListener("keydown", request);
+    return () => {
+      document.removeEventListener("pointerdown", request);
+      document.removeEventListener("keydown", request);
+    };
+  }, []);
+
   const s = state;
   const weightText =
     s && s.weight != null && s.weight > 0 ? s.weight.toFixed(2) : "00.00";
@@ -135,20 +151,20 @@ export function PbbDisplayView() {
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-7 border-t-2 border-white/40 px-5 py-3 text-[28px] leading-none">
-        <p>
+      <div className="flex shrink-0 items-center gap-4 whitespace-nowrap border-t-2 border-white/40 px-5 py-2 text-[34px] leading-none">
+        <p className="shrink-0">
           Jmlh Pallet: <span className="font-bold">{s?.jmlhPallet ?? 0}</span>
         </p>
-        <p>
+        <p className="shrink-0">
           Jmlh Sak: <span className="font-bold">{s?.jmlhSak ?? 0}</span>
         </p>
-        <p>
+        <p className="shrink-0">
           Jmlh Kg: <span className="font-bold">{s ? fmt(s.jmlhKg) : "0"}</span>{" "}
-          <span className="text-[18px]">Kg</span>
+          <span className="text-[22px]">Kg</span>
         </p>
         <span className="flex-1" />
         <span
-          className="rounded px-2 py-1 text-[13px] font-bold"
+          className="shrink-0 rounded px-3 py-1 text-[14px] font-bold"
           style={{
             backgroundColor: s?.connected ? "#16A34A" : "rgba(255,255,255,0.25)",
           }}

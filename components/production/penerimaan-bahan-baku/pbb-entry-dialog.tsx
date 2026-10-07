@@ -69,6 +69,7 @@ export function PbbEntryDialog({
   const [scaleActive, setScaleActive] = useState(false);
   const [scaleMessage, setScaleMessage] = useState<string | null>(null);
   const [lastKg, setLastKg] = useState<number | null>(null);
+  const [lastBerat, setLastBerat] = useState<number | null>(null);
   const [sakTimes, setSakTimes] = useState<Record<string, string>>({});
   const serialSupported = useMemo(() => isWebSerialSupported(), []);
 
@@ -137,7 +138,9 @@ export function PbbEntryDialog({
             kondisi: k.isLembab ? "LEMBAB" : "KERING",
           }))
         : [],
-      weight: lastKg,
+      weight:
+        lastBerat ??
+        (active && active.saks.length > 0 ? active.saks[active.saks.length - 1].berat : null),
       connected: scaleConnected,
       active: scaleActive,
     };
@@ -150,7 +153,7 @@ export function PbbEntryDialog({
     totalSak,
     totalKg,
     sakTimes,
-    lastKg,
+    lastBerat,
     scaleConnected,
     scaleActive,
   ]);
@@ -198,8 +201,8 @@ export function PbbEntryDialog({
         ...prev,
         [`${activePallet.id}:${noSakNext}`]: nowClock(),
       }));
-      setLastKg(beratAct);
       const berat = applyPotongan(beratAct, potongan);
+      setLastBerat(berat);
       setPallets((prev) =>
         prev.map((p) => {
           if (p.id !== activePallet.id) return p;
@@ -541,6 +544,12 @@ export function PbbEntryDialog({
                       >
                         Tampilkan Display
                       </button>
+                    )}
+                    {scaleConnected && lastKg != null && (
+                      <p className="rounded-lg bg-gray-50 px-2.5 py-1.5 text-center text-[11px] text-gray-500">
+                        Timbangan:{" "}
+                        <span className="text-lg font-bold text-[#111827]">{fmt(lastKg)}</span> Kg
+                      </p>
                     )}
                     {scaleActive && (
                       <p className="rounded-lg bg-green-50 px-2.5 py-2 text-[11px] text-green-700">

@@ -72,8 +72,12 @@ function displayBounds(): {
   return { left: availLeft + s.availWidth, top: availTop, width, height };
 }
 
-async function repositionToExternal(win: Window | null): Promise<void> {
-  if (!win) return;
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function repositionToExternal(win: Window | null): Promise<boolean> {
+  if (!win) return false;
   try {
     const w = window as unknown as {
       getScreenDetails?: () => Promise<{
@@ -86,18 +90,50 @@ async function repositionToExternal(win: Window | null): Promise<void> {
         }[];
       }>;
     };
-    if (!w.getScreenDetails) return;
+    if (!w.getScreenDetails) return false;
     const perm = await navigator.permissions.query({
       name: "window-placement" as PermissionName,
     });
-    if (perm.state !== "granted") return;
+    if (perm.state !== "granted") return false;
     const details = await w.getScreenDetails();
-    const target = details.screens.find((sc) => !sc.isPrimary);
-    if (!target) return;
+    if (win.closed) return false;
+    const wx = win.screenX;
+    const wy = win.screenY;
+    const target =
+      details.screens.find(
+        (sc) =>
+          wx < sc.left || wx >= sc.left + sc.width || wy < sc.top || wy >= sc.top + sc.height,
+      ) ?? details.screens.find((sc) => !sc.isPrimary);
+    if (!target) return false;
     const width = Math.min(DISPLAY_WIDTH, target.width);
     const height = Math.min(DISPLAY_HEIGHT, target.height);
     win.moveTo(target.left, target.top);
     win.resizeTo(width, height);
+    return true;
+  } catch {
+    /* abaikan */
+  }
+  return false;
+}
+
+async function placeOnExtendedScreen(win: Window | null): Promise<void> {
+  if (!win) return;
+  try {
+    if (await repositionToExternal(win)) return;
+    const s = window.screen as ExtendedScreen;
+    if (s.isExtended === false || win.closed) return;
+    const availLeft = s.availLeft ?? 0;
+    const availTop = s.availTop ?? 0;
+    const rightLeft = availLeft + s.availWidth;
+    await delay(120);
+    if (win.closed) return;
+    if (Math.abs(win.screenX - rightLeft) <= 24) return;
+    const leftTarget = availLeft - win.outerWidth;
+    win.moveTo(leftTarget, availTop);
+    await delay(140);
+    if (win.closed) return;
+    if (Math.abs(win.screenX - leftTarget) <= 24) return;
+    win.moveTo(rightLeft, availTop);
   } catch {
     /* abaikan */
   }
@@ -120,7 +156,7 @@ export function openScaleDisplay(): Window | null {
     "resizable=yes",
   ].join(",");
   const win = window.open(DISPLAY_PATH, WINDOW_NAME, features);
-  void repositionToExternal(win);
+  void placeOnExtendedScreen(win);
   return win;
 }
 

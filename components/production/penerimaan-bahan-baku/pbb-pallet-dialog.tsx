@@ -108,6 +108,7 @@ export function PbbPalletDialog({
   const [scaleActive, setScaleActive] = useState(false);
   const [scaleMessage, setScaleMessage] = useState<string | null>(null);
   const [lastKg, setLastKg] = useState<number | null>(null);
+  const [lastBerat, setLastBerat] = useState<number | null>(null);
   const serialSupported = useMemo(() => isWebSerialSupported(), []);
 
   const displayState = useMemo<DisplayState>(
@@ -124,7 +125,8 @@ export function PbbPalletDialog({
         berat: s.berat,
         kondisi: s.isLembab ? "LEMBAB" : "KERING",
       })),
-      weight: lastKg,
+      weight:
+        lastBerat ?? (row.saks.length > 0 ? row.saks[row.saks.length - 1].berat : null),
       connected: scaleConnected,
       active: scaleActive,
     }),
@@ -134,7 +136,7 @@ export function PbbPalletDialog({
       row,
       totals,
       totalBerat,
-      lastKg,
+      lastBerat,
       scaleConnected,
       scaleActive,
     ],
@@ -217,8 +219,8 @@ export function PbbPalletDialog({
   async function addSakValue(act: number) {
     if (!(act > 0)) return setError("Berat tidak valid");
     if (!potongan) return setError("Aturan potongan supplier belum dimuat");
-    setLastKg(act);
     const berat = applyPotongan(act, potongan);
+    setLastBerat(berat);
     await run(
       () => addPbbSaksAction(noPenerimaan, row.noBahanBaku, row.noPallet, [{ berat, beratAct: act, isLembab }]),
       "Sak berhasil ditambahkan",
@@ -392,6 +394,11 @@ export function PbbPalletDialog({
                     <button type="button" onClick={() => openDisplay()} className={`${btn} w-full border`} style={{ borderColor: BORDER }}>
                       Tampilkan Display
                     </button>
+                  )}
+                  {scaleConnected && lastKg != null && (
+                    <p className="rounded-lg bg-gray-50 px-2.5 py-1.5 text-center text-[11px] text-gray-500">
+                      Timbangan: <span className="text-lg font-bold text-[#111827]">{fmt(lastKg)}</span> Kg
+                    </p>
                   )}
                 </>
               ) : (
