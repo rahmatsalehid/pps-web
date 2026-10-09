@@ -65,7 +65,15 @@ export class ScaleConnection {
   async connect(): Promise<void> {
     const serial = getSerial();
     if (!serial) throw new Error("Browser tidak mendukung Web Serial (gunakan Chrome/Edge)");
-    const port = await serial.requestPort();
+    let port: SerialPortLike;
+    try {
+      port = await serial.requestPort();
+    } catch (e) {
+      if (e instanceof DOMException && e.name === "NotFoundError") {
+        throw new Error("Tidak ada port yang dipilih. Pilih port COM timbangan lalu klik Connect.");
+      }
+      throw e;
+    }
     try {
       await port.open({ baudRate: 9600, dataBits: 8, stopBits: 1, parity: "none" });
     } catch (e) {

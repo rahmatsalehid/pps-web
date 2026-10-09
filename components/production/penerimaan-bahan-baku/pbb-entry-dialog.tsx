@@ -245,12 +245,13 @@ export function PbbEntryDialog({
           closeDisplay();
         },
       );
-      const connecting = conn.connect();
-      openDisplay();
-      await connecting;
+      // Display dibuka SETELAH port dipilih: popup yang muncul saat dialog
+      // pemilih port terbuka merebut fokus dan membatalkan pemilihan.
+      await conn.connect();
       scaleRef.current = conn;
       setScaleConnected(true);
       setScaleMessage(null);
+      openDisplay();
     } catch (e) {
       closeDisplay();
       setScaleMessage(e instanceof Error ? e.message : "Gagal menghubungkan timbangan");
