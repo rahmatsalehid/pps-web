@@ -97,14 +97,25 @@ async function repositionToExternal(win: Window | null): Promise<boolean> {
     if (perm.state === "denied") return false;
     const details = await w.getScreenDetails();
     if (win.closed) return false;
-    const wx = win.screenX;
-    const wy = win.screenY;
-    const target =
+    // Layar tujuan = layar yang BUKAN tempat jendela aplikasi (opener) berada.
+    // Jangan dibandingkan dengan posisi popup: popup yang sudah di layar kedua
+    // (window dipakai ulang) akan dianggap "bukan target" lalu terlempar balik.
+    const cx = window.screenX + window.outerWidth / 2;
+    const cy = window.screenY + window.outerHeight / 2;
+    const openerScreen =
       details.screens.find(
-        (sc) =>
-          wx < sc.left || wx >= sc.left + sc.width || wy < sc.top || wy >= sc.top + sc.height,
-      ) ?? details.screens.find((sc) => !sc.isPrimary);
+        (sc) => cx >= sc.left && cx < sc.left + sc.width && cy >= sc.top && cy < sc.top + sc.height,
+      ) ?? details.screens.find((sc) => sc.isPrimary);
+    const target = details.screens.find((sc) => sc !== openerScreen);
     if (!target) return false;
+    const fs = win.document.fullscreenElement
+      ? win.screenX >= target.left &&
+        win.screenX < target.left + target.width &&
+        win.screenY >= target.top &&
+        win.screenY < target.top + target.height
+      : false;
+    if (fs) return true; // sudah full screen di layar tujuan
+    if (win.document.fullscreenElement) await win.document.exitFullscreen().catch(() => {});
     win.moveTo(target.left, target.top);
     win.resizeTo(target.width, target.height);
     return true;
