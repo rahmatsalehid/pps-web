@@ -4,7 +4,10 @@ import { useEffect, useState } from "react";
 import { connectDisplayView, type DisplayState } from "./pbb-display";
 import { fmt } from "./pbb-potongan";
 
-const FONT = "Calibri, 'Segoe UI', Arial, sans-serif";
+const BASE_W = 1010;
+const BASE_H = 730;
+const ZOOM_BOOST = 1.1;
+const FONT ="Calibri, 'Segoe UI', Arial, sans-serif";
 
 export function PbbDisplayView() {
   const [state, setState] = useState<DisplayState | null>(null);
@@ -38,6 +41,21 @@ export function PbbDisplayView() {
     };
   }, []);
 
+  // Desain dasar 1010×730; diperbesar mengikuti ukuran layar (zoom CSS).
+  const [scale, setScale] = useState(1);
+  useEffect(() => {
+    const update = () =>
+      setScale(
+        Math.max(
+          Math.min(window.innerWidth / BASE_W, window.innerHeight / BASE_H) * ZOOM_BOOST,
+          0.6,
+        ),
+      );
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
   const s = state;
   const weightText =
     s && s.weight != null && s.weight > 0 ? s.weight.toFixed(2) : "00.00";
@@ -45,8 +63,14 @@ export function PbbDisplayView() {
 
   return (
     <div
-      className="flex h-screen w-screen flex-col overflow-hidden text-white"
-      style={{ backgroundColor: "#0078D7", fontFamily: FONT }}
+      className="flex flex-col overflow-hidden text-white"
+      style={{
+        backgroundColor: "#0078D7",
+        fontFamily: FONT,
+        zoom: scale,
+        width: `${100 / scale}vw`,
+        height: `${100 / scale}vh`,
+      }}
     >
       <div className="flex shrink-0 items-end gap-3 border-b-2 border-white/40 px-4 pb-2 pt-3">
         <p className="shrink-0 text-[33px] leading-none">Supplier :</p>

@@ -413,18 +413,20 @@ export function PbbPalletDialog({
                 </p>
               )}
               {scaleMessage && <p className="rounded-lg bg-red-50 px-2.5 py-2 text-[11px] text-red-700">{scaleMessage}</p>}
-              <input
-                autoFocus
-                inputMode="decimal"
-                value={beratText}
-                onChange={(e) => setBeratText(e.target.value.replace(/[^0-9.,]/g, ""))}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") void saveSak();
-                }}
-                placeholder="Berat timbangan (kg)"
-                className={inputCls}
-                style={{ borderColor: BORDER }}
-              />
+              {!scaleActive && (
+                <input
+                  autoFocus
+                  inputMode="decimal"
+                  value={beratText}
+                  onChange={(e) => setBeratText(e.target.value.replace(/[^0-9.,]/g, ""))}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") void saveSak();
+                  }}
+                  placeholder="Berat timbangan (kg)"
+                  className={inputCls}
+                  style={{ borderColor: BORDER }}
+                />
+              )}
               <div className="grid grid-cols-2 gap-1.5">
                 {[false, true].map((v) => (
                   <button
@@ -447,9 +449,11 @@ export function PbbPalletDialog({
                 <button type="button" onClick={() => setMode("view")} className={`${btn} flex-1 border`} style={{ borderColor: BORDER }}>
                   Batal
                 </button>
-                <button type="button" onClick={() => void saveSak()} disabled={busy || !potongan} className={`${btn} flex-1 text-white`} style={{ backgroundColor: color }}>
-                  Tambah Sak
-                </button>
+                {!scaleActive && (
+                  <button type="button" onClick={() => void saveSak()} disabled={busy || !potongan} className={`${btn} flex-1 text-white`} style={{ backgroundColor: color }}>
+                    Tambah Sak
+                  </button>
+                )}
               </div>
             </div>
           )}

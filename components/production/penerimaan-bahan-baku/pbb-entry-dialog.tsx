@@ -590,28 +590,32 @@ export function PbbEntryDialog({
                 </div>
 
                 <div className="border-t pt-3" style={{ borderColor: BORDER }}>
-                  <p className="mb-1.5 text-xs font-medium text-gray-600">Input berat manual (kg)</p>
-                  <div className="flex gap-1.5">
-                    <input
-                      inputMode="decimal"
-                      value={beratText}
-                      onChange={(e) => setBeratText(e.target.value.replace(/[^0-9.,]/g, ""))}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") addManual();
-                      }}
-                      placeholder="0.00"
-                      className={inputCls}
-                      style={{ borderColor: BORDER }}
-                    />
-                    <button
-                      type="button"
-                      onClick={addManual}
-                      className="shrink-0 rounded-lg px-3 text-xs font-bold text-white"
-                      style={{ backgroundColor: accent }}
-                    >
-                      Tambah Sak
-                    </button>
-                  </div>
+                  {!scaleActive && (
+                    <p className="mb-1.5 text-xs font-medium text-gray-600">Input berat manual (kg)</p>
+                  )}
+                  {!scaleActive && (
+                    <div className="flex gap-1.5">
+                      <input
+                        inputMode="decimal"
+                        value={beratText}
+                        onChange={(e) => setBeratText(e.target.value.replace(/[^0-9.,]/g, ""))}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") addManual();
+                        }}
+                        placeholder="0.00"
+                        className={inputCls}
+                        style={{ borderColor: BORDER }}
+                      />
+                      <button
+                        type="button"
+                        onClick={addManual}
+                        className="shrink-0 rounded-lg px-3 text-xs font-bold text-white"
+                        style={{ backgroundColor: accent }}
+                      >
+                        Tambah Sak
+                      </button>
+                    </div>
+                  )}
                   {potongan && (
                     <p className="mt-1.5 text-[10px] text-gray-500">
                       {potongan.mode === "tetap"
