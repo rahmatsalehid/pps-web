@@ -49,7 +49,7 @@ export type NavSection = {
 // Sub-menu Label mengikuti kategori yang sama dengan backend
 // (E:\JOB\API\pps-backend\src\modules\label\*).
 const LABEL_CHILDREN: NavItem[] = [
-  { label: "Bahan Baku", href: "#", icon: GrainIcon },
+  { label: "Bahan Baku", href: "/label/bahan-baku", icon: GrainIcon },
   { label: "Bahan Pendukung", href: "#", icon: LayersIcon },
   { label: "Barang Dagang", href: "#", icon: ShoppingCartIcon },
   { label: "Bonggolan", href: "#", icon: PackageIcon },
@@ -151,6 +151,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: "Master Operator & Regu", href: "/master/operator-regu", icon: UsersIcon },
       { label: "Master Cetakan", href: "/master/cetakan", icon: LayersIcon },
       { label: "Master Formula", href: "/master/formula", icon: ClipboardListIcon },
+      { label: "Blok & Lokasi", href: "/master/blok-lokasi", icon: MapIcon },
       { label: "User", href: "/user", icon: UsersIcon },
       { label: "Role", href: "/master/permission-group", icon: ShieldIcon },
       { label: "Permission", href: "#", icon: KeyIcon },

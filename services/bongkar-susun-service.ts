@@ -9,7 +9,8 @@ export type BsCategory =
   | "furnitureWip"
   | "barangJadi"
   | "bonggolan"
-  | "mixer";
+  | "mixer"
+  | "reject";
 
 const CATEGORY_LABELS: Record<string, string> = {
   washing: "Washing",
@@ -21,6 +22,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   barangJadi: "Barang Jadi",
   bahanBaku: "Bahan Baku",
   bonggolan: "Bonggolan",
+  reject: "Reject",
 };
 
 const CATEGORY_CODES: Record<string, string> = {
@@ -33,6 +35,7 @@ const CATEGORY_CODES: Record<string, string> = {
   barangJadi: "BA.",
   bahanBaku: "A.",
   bonggolan: "M.",
+  reject: "BF.",
 };
 
 export function bsCategoryLabel(
@@ -56,7 +59,12 @@ export function bsIsPcsCategory(category: string | null | undefined): boolean {
   return category === "furnitureWip" || category === "barangJadi";
 }
 
-const BS_PARTIAL_CATEGORIES = new Set(["mixer", "furnitureWip", "barangJadi"]);
+const BS_PARTIAL_CATEGORIES = new Set([
+  "mixer",
+  "furnitureWip",
+  "barangJadi",
+  "reject",
+]);
 
 export function bsSupportsPartialInput(
   category: string | null | undefined,
@@ -65,7 +73,7 @@ export function bsSupportsPartialInput(
 }
 
 export function bsPartialUnit(category: string | null | undefined): "pcs" | "kg" {
-  return category === "mixer" ? "kg" : "pcs";
+  return category === "mixer" || category === "reject" ? "kg" : "pcs";
 }
 
 export function bsHasSaks(category: string | null | undefined): boolean {
@@ -133,7 +141,7 @@ export type BsDetail = {
 
 export type BsOutputPayload = Record<string, unknown>;
 
-/** Input partial kategori pcs/kg (furniture WIP / barang jadi / mixer): label + qty terpakai (pcs atau kg). */
+/** Input partial kategori pcs/kg (furniture WIP / barang jadi / mixer / reject): label + qty terpakai (pcs atau kg). */
 export type BsInputPartialPayload = { labelCode: string; qty: number };
 
 export type BsCreatePayload = {
@@ -513,7 +521,7 @@ function deriveNoBahanBaku(noPallet: string): string {
 /**
  * Susun target cetak untuk satu label output. Mengikuti tablet: prefix kode
  * menentukan modul label (A. bahan baku, B. washing, BA. packing, BB. furniture
- * WIP, D. broker, F. crusher, H. mixer, M. bonggolan, V. gilingan).
+ * WIP, BF. reject, D. broker, F. crusher, H. mixer, M. bonggolan, V. gilingan).
  */
 export function bsPrintTargetOf(out: BsOutputLabel): BsPrintTarget | null {
   const code = (out.labelCode ?? "").trim();
@@ -532,6 +540,7 @@ export function bsPrintTargetOf(out: BsOutputLabel): BsPrintTarget | null {
   const isBahanBaku = code.startsWith("A");
   const isPacking = code.startsWith("BA");
   const isFurnitureWip = code.startsWith("BB");
+  const isReject = code.startsWith("BF");
   const isBroker = code.startsWith("D");
   const isCrusher = code.startsWith("F");
   const isMixer = code.startsWith("H");
@@ -556,17 +565,19 @@ export function bsPrintTargetOf(out: BsOutputLabel): BsPrintTarget | null {
     ? `packing/${encodeURIComponent(code)}`
     : isFurnitureWip
       ? `furniture-wip/${encodeURIComponent(code)}`
-      : isBroker
-        ? `broker/${encodeURIComponent(code)}`
-        : isCrusher
-          ? `crusher/${encodeURIComponent(code)}`
-          : isMixer
-            ? `mixer/${encodeURIComponent(code)}`
-            : isBonggolan
-              ? `bonggolan/${encodeURIComponent(code)}`
-              : isGilingan
-                ? `gilingan/${encodeURIComponent(code)}`
-                : `washing/${encodeURIComponent(code)}`;
+      : isReject
+        ? `reject/${encodeURIComponent(code)}`
+        : isBroker
+          ? `broker/${encodeURIComponent(code)}`
+          : isCrusher
+            ? `crusher/${encodeURIComponent(code)}`
+            : isMixer
+              ? `mixer/${encodeURIComponent(code)}`
+              : isBonggolan
+                ? `bonggolan/${encodeURIComponent(code)}`
+                : isGilingan
+                  ? `gilingan/${encodeURIComponent(code)}`
+                  : `washing/${encodeURIComponent(code)}`;
 
   return { path, lockCode: code, labelCode: code };
 }

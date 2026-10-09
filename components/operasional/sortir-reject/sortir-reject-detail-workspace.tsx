@@ -249,7 +249,8 @@ export function SortirRejectDetailWorkspace({
 function HeaderCard({ detail }: { detail: SrTransaction }) {
   const isReject =
     detail.balance === false ||
-    (detail.balance == null && detail.category === "reject");
+    (detail.balance == null &&
+      (detail.category === "reject" || detail.category === "bahanPendukung"));
 
   return (
     <div

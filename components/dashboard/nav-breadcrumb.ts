@@ -415,6 +415,18 @@ export function resolveNavMeta(pathname: string): NavMeta {
     };
   }
 
+  if (path === "/label/bahan-baku") {
+    return {
+      title: "Label Bahan Baku",
+      subtitle: "Label",
+      crumbs: [
+        ROOT_CRUMB,
+        { label: "Label" },
+        { label: "Label Bahan Baku", href: path },
+      ],
+    };
+  }
+
   if (path === "/production/penerimaan-bahan-baku") {
     return {
       title: "Penerimaan Bahan Baku",

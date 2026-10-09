@@ -149,6 +149,8 @@ function labelCodeOf(j: Record<string, unknown>): string {
       j["NoFurnitureWIPPartial"],
       j["noFurnitureWIPPartial"],
       j["noFurnitureWipPartial"],
+      j["NoBahanPendukung"],
+      j["noBahanPendukung"],
       j["NoReject"],
       j["noReject"],
       j["labelCode"],
@@ -160,6 +162,7 @@ export function srLabelGroup(labelCode: string): string {
   const code = labelCode.toUpperCase();
   if (code.startsWith("BA")) return "BA";
   if (code.startsWith("BB")) return "BB";
+  if (code.startsWith("BP")) return "BP";
   if (code.startsWith("BF")) return "BF";
   return "";
 }
@@ -170,7 +173,7 @@ export function srIsRejectPrefixInput(
   if (inputs.length === 0) return false;
   return inputs.every((l) => {
     const code = l.labelCode.toUpperCase();
-    return code.startsWith("BF") || code.startsWith("BB");
+    return code.startsWith("BF") || code.startsWith("BB") || code.startsWith("BP");
   });
 }
 
@@ -360,8 +363,10 @@ export async function fetchSrMasters(token: string | undefined): Promise<SrMaste
   await expectOk(bjRes.status, bjRes.data, "Gagal memuat jenis barang jadi");
   await expectOk(rejectRes.status, rejectRes.data, "Gagal memuat jenis reject");
 
-  const rows = (r: { data?: unknown }) =>
-    Array.isArray(r.data) ? (r.data as Record<string, unknown>[]) : [];
+  const rows = (r: { data?: { data?: unknown } }) =>
+    Array.isArray(r.data?.data)
+      ? (r.data.data as Record<string, unknown>[])
+      : [];
 
   return {
     warehouses: rows(warehouseRes).map((w) => ({

@@ -26,9 +26,13 @@ export function PbbDisplayView() {
       });
     };
     request();
+    const retry = window.setTimeout(request, 600);
+    window.addEventListener("resize", request);
     document.addEventListener("pointerdown", request);
     document.addEventListener("keydown", request);
     return () => {
+      window.clearTimeout(retry);
+      window.removeEventListener("resize", request);
       document.removeEventListener("pointerdown", request);
       document.removeEventListener("keydown", request);
     };

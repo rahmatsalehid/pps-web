@@ -94,7 +94,7 @@ async function repositionToExternal(win: Window | null): Promise<boolean> {
     const perm = await navigator.permissions.query({
       name: "window-placement" as PermissionName,
     });
-    if (perm.state !== "granted") return false;
+    if (perm.state === "denied") return false;
     const details = await w.getScreenDetails();
     if (win.closed) return false;
     const wx = win.screenX;
@@ -105,10 +105,8 @@ async function repositionToExternal(win: Window | null): Promise<boolean> {
           wx < sc.left || wx >= sc.left + sc.width || wy < sc.top || wy >= sc.top + sc.height,
       ) ?? details.screens.find((sc) => !sc.isPrimary);
     if (!target) return false;
-    const width = Math.min(DISPLAY_WIDTH, target.width);
-    const height = Math.min(DISPLAY_HEIGHT, target.height);
     win.moveTo(target.left, target.top);
-    win.resizeTo(width, height);
+    win.resizeTo(target.width, target.height);
     return true;
   } catch {
     /* abaikan */

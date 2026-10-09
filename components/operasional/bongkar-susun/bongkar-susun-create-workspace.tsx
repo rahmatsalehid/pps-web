@@ -41,12 +41,13 @@ const ACCEPTED_LABELS = [
   { prefix: "BB", label: "Furniture WIP" },
   { prefix: "BA", label: "Barang Jadi" },
   { prefix: "H", label: "Mixer" },
+  { prefix: "BF", label: "Reject" },
 ];
 
 export function BongkarSusunCreateWorkspace() {
   const router = useRouter();
   const [rawInputs, setInputs] = useState<BsLabelInfo[]>([]);
-  // Qty partial per label (kategori: mixer, furniture WIP, barang jadi).
+  // Qty partial per label (kategori: mixer, reject, furniture WIP, barang jadi).
   const [partialPcs, setPartialPcs] = useState<Record<string, number>>({});
   const [partialTarget, setPartialTarget] = useState<BsLabelInfo | null>(null);
   const [outputs, setOutputs] = useState<BsOutputEntry[]>([]);
@@ -290,7 +291,7 @@ export function BongkarSusunCreateWorkspace() {
           inputsPartial: partialInputs.map((l) => ({
             labelCode: l.labelCode,
             qty:
-              l.category === "mixer"
+              bsPartialUnit(l.category) === "kg"
                 ? Math.round(l.totalBerat * 1000) / 1000
                 : Math.round(l.totalBerat),
           })),
@@ -313,7 +314,7 @@ export function BongkarSusunCreateWorkspace() {
   return (
     <div className="flex flex-col gap-3 lg:h-full lg:min-h-0">
       <div className="flex flex-col gap-3 lg:h-0 lg:min-h-0 lg:flex-1 lg:flex-row lg:items-stretch">
-        <section className="lg:h-full lg:min-h-0 lg:w-[260px] xl:w-[320px]">
+        <section className="lg:h-full lg:min-h-0 lg:min-w-0 lg:flex-1">
           <InputsCard
             inputs={inputs}
             onRemove={removeInput}

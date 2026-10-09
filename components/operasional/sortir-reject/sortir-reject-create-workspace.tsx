@@ -38,6 +38,7 @@ const GREEN = "#0A7349";
 const ACCEPTED_LABELS = [
   { prefix: "BB", label: "Furniture WIP" },
   { prefix: "BA", label: "Barang Jadi" },
+  { prefix: "BP", label: "Bahan Pendukung" },
 ];
 
 type SrOutputEntry = {
@@ -240,7 +241,7 @@ export function SortirRejectCreateWorkspace() {
   return (
     <div className="flex flex-col gap-3 lg:h-full lg:min-h-0">
       <div className="flex flex-col gap-3 lg:h-0 lg:min-h-0 lg:flex-1 lg:flex-row lg:items-stretch">
-        <section className="lg:h-full lg:min-h-0 lg:w-[260px] xl:w-[320px]">
+        <section className="lg:h-full lg:min-h-0 lg:min-w-0 lg:flex-1">
           <InputsCard
             inputs={inputs}
             onRemove={removeInput}
@@ -289,7 +290,7 @@ export function SortirRejectCreateWorkspace() {
       {scanOpen && (
         <SortirRejectScanDialog
           onLookup={lookupLabel}
-          manualHint="BA / BB / BF.0000000001"
+          manualHint="BA / BB / BP / BF.0000000001"
           headerSubtitle={
             inputs.length > 0 ? srLabelGroup(inputs[0].labelCode) : undefined
           }
@@ -449,7 +450,7 @@ function OutputsPanel({
 }) {
   return (
     <div
-      className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl bg-white"
+      className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl bg-white"
       style={{
         border: `1px solid ${GREEN}4D`,
         boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
