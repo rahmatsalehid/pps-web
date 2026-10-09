@@ -66,7 +66,20 @@ export class ScaleConnection {
     const serial = getSerial();
     if (!serial) throw new Error("Browser tidak mendukung Web Serial (gunakan Chrome/Edge)");
     const port = await serial.requestPort();
-    await port.open({ baudRate: 9600, dataBits: 8, stopBits: 1, parity: "none" });
+    try {
+      await port.open({ baudRate: 9600, dataBits: 8, stopBits: 1, parity: "none" });
+    } catch (e) {
+      const name = e instanceof DOMException ? e.name : "";
+      if (name === "NetworkError") {
+        throw new Error(
+          "Port timbangan tidak bisa dibuka. Pastikan port COM yang dipilih benar dan tidak sedang dipakai aplikasi lain (aplikasi VB timbangan, tab/jendela browser lain), lalu cabut-colok kabel USB dan coba lagi.",
+        );
+      }
+      if (name === "InvalidStateError") {
+        throw new Error("Port timbangan sudah terbuka. Tutup koneksi sebelumnya lalu coba lagi.");
+      }
+      throw e;
+    }
     this.port = port;
     this.running = true;
     void this.readLoop(port);
