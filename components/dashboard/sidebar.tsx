@@ -4,12 +4,41 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { ChevronDown, X } from "./icons";
-import { NAV_SECTIONS, type NavItem } from "./nav-items";
+import { NAV_SECTIONS, type NavItem, type NavSection } from "./nav-items";
 
 function isPathActive(pathname: string, href: string): boolean {
   if (!href || href === "#") return false;
   if (href === "/") return pathname === "/";
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function canShow(item: NavItem, perms: string[] | null): boolean {
+  if (!item.perm || perms === null) return true;
+  if (perms.includes("*")) return true;
+  return perms.includes(item.perm);
+}
+
+/** Sembunyikan menu tanpa permission; grup yang anaknya habis ikut hilang. */
+function filterSections(
+  sections: NavSection[],
+  perms: string[] | null,
+): NavSection[] {
+  return sections
+    .map((section) => ({
+      ...section,
+      items: section.items
+        .map((item) =>
+          item.children
+            ? { ...item, children: item.children.filter((c) => canShow(c, perms)) }
+            : item,
+        )
+        .filter(
+          (item) =>
+            canShow(item, perms) &&
+            !(item.children && item.children.length === 0),
+        ),
+    }))
+    .filter((section) => section.items.length > 0);
 }
 
 function NavLink({
@@ -152,12 +181,16 @@ export function Sidebar({
   open,
   collapsed = false,
   onClose,
+  permissions = null,
 }: {
   open: boolean;
   collapsed?: boolean;
   onClose: () => void;
+  /** null = gagal diambil → semua menu tampil (fail-open). */
+  permissions?: string[] | null;
 }) {
   const pathname = usePathname();
+  const sections = filterSections(NAV_SECTIONS, permissions);
 
   return (
     <>
@@ -201,7 +234,7 @@ export function Sidebar({
 
           {/* Navigation */}
           <nav className="no-scrollbar min-h-0 flex-1 space-y-1 overflow-y-auto px-3 pb-4 pt-4">
-            {NAV_SECTIONS.map((section, index) => (
+            {sections.map((section, index) => (
               <div key={section.title ?? index}>
                 {section.title && (
                   <p className="px-3 pb-2 pt-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">

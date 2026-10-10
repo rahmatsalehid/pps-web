@@ -1,4 +1,5 @@
 import { NAV_SECTIONS, type NavItem } from "./nav-items";
+import { LAPORAN_REGISTRY } from "@/components/laporan/laporan-catalog";
 
 export type BreadcrumbCrumb = {
   label: string;
@@ -719,6 +720,30 @@ export function resolveNavMeta(pathname: string): NavMeta {
         ROOT_CRUMB,
         { label: "Mapping", href: "/mapping" },
         { label: `Layout ${blok}`, href: path },
+      ],
+    };
+  }
+
+  // Laporan: daftar (/laporan) dan detail per kode (/laporan/<kode>)
+  const laporanMatch = /^\/laporan(?:\/([^/]+))?$/.exec(path);
+  if (laporanMatch) {
+    const kode = laporanMatch[1];
+    if (!kode) {
+      return {
+        title: "Laporan",
+        subtitle: "Laporan & Monitoring",
+        crumbs: [ROOT_CRUMB, { label: "Laporan", href: "/laporan" }],
+      };
+    }
+    const spec = LAPORAN_REGISTRY[kode];
+    const label = spec ? spec.title : decodeURIComponent(kode);
+    return {
+      title: label,
+      subtitle: "Laporan",
+      crumbs: [
+        ROOT_CRUMB,
+        { label: "Laporan", href: "/laporan" },
+        { label, href: path },
       ],
     };
   }

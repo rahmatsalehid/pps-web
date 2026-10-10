@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import {
   AUTH_TOKEN_COOKIE,
   AUTH_USER_COOKIE,
+  fetchMyPermissions,
   type SessionUser,
 } from "@/services/auth-service";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
@@ -36,5 +37,19 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   const user = readSessionUser(cookieStore.get(AUTH_USER_COOKIE)?.value);
 
-  return <DashboardShell user={user}>{children}</DashboardShell>;
+  // Permission untuk menyaring menu sidebar. null = gagal diambil → jangan
+  // sembunyikan apa pun (fail-open agar menu tidak hilang saat backend error).
+  let permissions: string[] | null = null;
+  try {
+    const me = await fetchMyPermissions(cookieStore.get(AUTH_TOKEN_COOKIE)?.value);
+    permissions = me.data.permissions ?? [];
+  } catch {
+    permissions = null;
+  }
+
+  return (
+    <DashboardShell user={user} permissions={permissions}>
+      {children}
+    </DashboardShell>
+  );
 }

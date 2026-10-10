@@ -143,6 +143,11 @@ export const LAPORAN_KATEGORI: LaporanKategori[] = [
     ],
   },
   {
+    nama: "Barang Dagang",
+    ikon: "🛒",
+    items: [{ title: "Laporan Stok Barang Dagang", kode: "stok-barang-dagang" }],
+  },
+  {
     nama: "Rekap Produksi",
     ikon: "📈",
     items: [
@@ -405,5 +410,21 @@ export const LAPORAN_REGISTRY: Record<string, LaporanSpec> = {
     endpoint: "",
     kind: "pdf",
     fields: [{ key: "tglAkhir", label: "Tanggal", type: "date", default: "today" }],
+  },
+  "stok-barang-dagang": {
+    kode: "stok-barang-dagang",
+    title: "Laporan Stok Barang Dagang",
+    endpoint: "",
+    kind: "pdf",
+    fields: [
+      { key: "tglAkhir", label: "Tanggal Akhir", type: "date", default: "today" },
+      {
+        key: "warehouse",
+        label: "Warehouse",
+        type: "select",
+        default: "ALL",
+        optionsSource: "warehouse",
+      },
+    ],
   },
 };

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
   getWarehouseOptionsAction,
@@ -137,13 +136,6 @@ export function LaporanViewer({ spec }: { spec: LaporanSpec }) {
             Atur filter lalu tekan Tampilkan untuk memuat data
           </p>
         </div>
-        <Link
-          href="/laporan"
-          className="rounded-lg border bg-white px-2.5 py-1.5 text-[12px] font-semibold text-gray-600 hover:bg-gray-50"
-          style={{ borderColor: BORDER }}
-        >
-          ← Kembali ke Daftar Laporan
-        </Link>
       </div>
 
       {error && (

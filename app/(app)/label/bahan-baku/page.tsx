@@ -20,8 +20,9 @@ export default async function LabelBahanBakuPage() {
   try {
     const me = await fetchMyPermissions(token);
     const perms = me.data.permissions;
-    canView = hasPermission(perms, "penerimaanbahanbaku:read");
+    canView = hasPermission(perms, "label_bahanbaku:read");
     canQc =
+      hasPermission(perms, "label_bahanbaku:update") ||
       hasPermission(perms, "qc_label:update") ||
       hasPermission(perms, "penerimaanbahanbaku:update");
   } catch {
@@ -44,7 +45,7 @@ function AccessDenied() {
         <p className="mt-2 text-[13px] leading-relaxed text-gray-600">
           Anda tidak memiliki permission{" "}
           <span className="font-semibold text-gray-800">
-            penerimaanbahanbaku:read
+            label_bahanbaku:read
           </span>{" "}
           untuk membuka halaman Label Bahan Baku. Hubungi administrator untuk
           memberikan akses.

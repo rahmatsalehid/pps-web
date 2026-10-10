@@ -7,9 +7,12 @@ import { Sidebar } from "./sidebar";
 
 export function DashboardShell({
   user,
+  permissions,
   children,
 }: {
   user: SessionUser;
+  /** Daftar permission user; null = gagal diambil (menu tanpa filter). */
+  permissions: string[] | null;
   children: ReactNode;
 }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -22,6 +25,7 @@ export function DashboardShell({
         open={mobileOpen}
         collapsed={collapsed}
         onClose={() => setMobileOpen(false)}
+        permissions={permissions}
       />
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">

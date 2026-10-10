@@ -13,7 +13,25 @@ const PDF_SOURCES: Record<string, (search: string) => string> = {
     `${REPORT_API_URL}/api/sortir-reject-v2/laporan/pdf${search}`,
   "stok-broker-qc": (search) =>
     `${BACKEND_API_URL}/api/laporan/broker/stok-qc/pdf${search}`,
+  "stok-barang-dagang": (search) =>
+    `${BACKEND_API_URL}/api/laporan/barang-dagang/stok/pdf${search}`,
 };
+
+/** Cek laporan:read di backend (GET /api/auth/me) sebelum meneruskan PDF. */
+async function hasLaporanAccess(token: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${BACKEND_API_URL}/api/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    if (!res.ok) return false;
+    const body = (await res.json()) as { permissions?: string[] | null };
+    const perms = body.permissions ?? [];
+    return perms.includes("*") || perms.includes("laporan:read");
+  } catch {
+    return false;
+  }
+}
 
 export async function GET(
   request: NextRequest,
@@ -32,6 +50,15 @@ export async function GET(
     return Response.json(
       { success: false, message: "Sesi login tidak ditemukan" },
       { status: 401 },
+    );
+  }
+  if (!(await hasLaporanAccess(token))) {
+    return Response.json(
+      {
+        success: false,
+        message: "Forbidden: permission laporan:read dibutuhkan",
+      },
+      { status: 403 },
     );
   }
   try {

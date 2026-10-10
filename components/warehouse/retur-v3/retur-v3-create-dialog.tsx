@@ -305,7 +305,7 @@ function ReturItemInputDialog({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/50 p-4">
-      <div className="w-full max-w-[460px] overflow-hidden rounded-2xl bg-white shadow-2xl">
+      <div className="w-full max-w-[460px] rounded-2xl bg-white shadow-2xl">
         <div className="flex items-center justify-between px-5 pb-1 pt-5">
           <p className="text-[16px] font-extrabold text-[#1A1D23]">
             Tambah Item Retur
@@ -484,7 +484,7 @@ function SearchSelect({
             className="h-10 w-full border-b px-3 text-sm outline-none"
             style={{ borderColor: BORDER }}
           />
-          <div className="max-h-56 overflow-y-auto">
+          <div className="max-h-80 overflow-y-auto">
             {filtered.length === 0 ? (
               <p className="px-3 py-3 text-center text-xs text-gray-400">
                 Tidak ada data.

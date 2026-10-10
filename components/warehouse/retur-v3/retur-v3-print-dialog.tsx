@@ -5,7 +5,7 @@ import { printReturLabelAction } from "@/app/(app)/warehouse/retur-v3/actions";
 import type { ReturOutput } from "@/services/retur-v3-service";
 import { Loader2Icon, X } from "@/components/dashboard/icons";
 import { PrintIcon } from "./retur-v3-icons";
-import { printPdfBase64 } from "./print-pdf";
+import { closePrintWindow, openPrintWindow, printPdfIntoWindow } from "./print-pdf";
 
 const PRIMARY = "#1E6FD9";
 const BORDER = "#E2E6EA";
@@ -47,14 +47,44 @@ export function ReturV3PrintDialog({
     if (busy || selected.size === 0) return;
     setBusy(true);
     setError(null);
-    for (const out of outputs) {
-      if (!selected.has(out.labelCode)) continue;
-      const res = await printReturLabelAction(out.kodeKategori, out.labelCode);
-      if (!res.ok) {
-        setError(res.error);
-        break;
+    const targets = outputs.filter((o) => selected.has(o.labelCode));
+    // Buka jendela blank saat klik juga (masih dalam user gesture) supaya tidak
+    // diblokir popup blocker; PDF diisi setelah server action selesai.
+    const wins = targets.map(() => openPrintWindow());
+    if (wins.some((w) => w === null)) {
+      wins.forEach(closePrintWindow);
+      setError(
+        "Jendela print diblokir browser. Izinkan popup untuk situs ini, lalu coba lagi.",
+      );
+      setBusy(false);
+      return;
+    }
+    let failed = false;
+    try {
+      for (let i = 0; i < targets.length; i++) {
+        const out = targets[i];
+        const res = await printReturLabelAction(out.kodeKategori, out.labelCode);
+        if (!res.ok) {
+          setError(res.error);
+          failed = true;
+          break;
+        }
+        if (!printPdfIntoWindow(wins[i], res.pdfBase64, out.labelCode)) {
+          setError(`Gagal memuat PDF label ${out.labelCode}. Coba cetak ulang.`);
+          failed = true;
+          break;
+        }
       }
-      printPdfBase64(res.pdfBase64, out.labelCode);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Terjadi kesalahan saat mencetak.");
+      failed = true;
+    }
+    if (failed) {
+      // Tutup jendela yang belum terpakai; dialog tetap terbuka agar pesan
+      // error terbaca (sebelumnya error disembunyikan karena dialog ikut tertutup).
+      wins.forEach(closePrintWindow);
+      setBusy(false);
+      return;
     }
     setBusy(false);
     onPrinted();

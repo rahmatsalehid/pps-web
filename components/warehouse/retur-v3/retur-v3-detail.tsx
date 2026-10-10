@@ -198,11 +198,12 @@ export function ReturV3DetailPanel({
   const canComplete =
     header.isDiganti && !header.isComplete && allItemsFulfilled;
 
-  const showPrintFab = header.isTidakDiganti && outputs.length > 0;
   const showCompleteFab =
     header.isDiganti && step1Complete && !header.isComplete && canComplete && canUpdate;
   const showScanFab =
     header.isDiganti && step1Complete && !header.isComplete && !canComplete && canUpdate;
+  const showPrintFab =
+    outputs.length > 0 && !header.isPending && !showScanFab && !showCompleteFab;
 
   return (
     <div className="relative flex h-full min-h-0 flex-col">
@@ -249,7 +250,13 @@ export function ReturV3DetailPanel({
             defaultOpen={!step1Complete}
             canUpdate={canUpdate}
             generating={generating}
-            onGenerate={(item) => void doGenerate(item, {})}
+            onGenerate={(item) => {
+              if (item.kategoriInput === "REJECT") {
+                setRejectItem(item);
+                return;
+              }
+              void doGenerate(item, {});
+            }}
             onPrint={() => setPrintOpen(true)}
           />
         )}
