@@ -396,7 +396,7 @@ export function PbbPalletDialog({
                       Tampilkan Display
                     </button>
                   )}
-                  {scaleConnected && lastKg != null && (
+                  {scaleConnected && !scaleActive && lastKg != null && (
                     <p className="rounded-lg bg-gray-50 px-2.5 py-1.5 text-center text-[11px] text-gray-500">
                       Timbangan: <span className="text-lg font-bold text-[#111827]">{fmt(lastKg)}</span> Kg
                     </p>
@@ -440,11 +440,6 @@ export function PbbPalletDialog({
                   </button>
                 ))}
               </div>
-              {potongan && (
-                <p className="text-[10px] text-gray-500">
-                  {potongan.mode === "tetap" ? `Potongan supplier: ${potongan.percent}%` : `Potongan acak ${potongan.lower / 10}%–${potongan.upper / 10}%`}
-                </p>
-              )}
               <div className="flex gap-2">
                 <button type="button" onClick={() => setMode("view")} className={`${btn} flex-1 border`} style={{ borderColor: BORDER }}>
                   Batal

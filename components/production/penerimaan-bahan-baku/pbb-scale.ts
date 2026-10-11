@@ -75,7 +75,17 @@ export class ScaleConnection {
       throw e;
     }
     try {
-      await port.open({ baudRate: 9600, dataBits: 8, stopBits: 1, parity: "none" });
+      // Percobaan ulang: driver USB-serial kadang butuh jeda sesaat setelah
+      // port sebelumnya ditutup (mis. habis Stop / sambung ulang).
+      for (let attempt = 0; ; attempt++) {
+        try {
+          await port.open({ baudRate: 9600, dataBits: 8, stopBits: 1, parity: "none" });
+          break;
+        } catch (e) {
+          if (attempt >= 2 || !(e instanceof DOMException) || e.name !== "NetworkError") throw e;
+          await new Promise((r) => setTimeout(r, 600));
+        }
+      }
     } catch (e) {
       const name = e instanceof DOMException ? e.name : "";
       if (name === "NetworkError") {

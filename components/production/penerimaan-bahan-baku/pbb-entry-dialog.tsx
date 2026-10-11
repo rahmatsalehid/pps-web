@@ -546,7 +546,7 @@ export function PbbEntryDialog({
                         Tampilkan Display
                       </button>
                     )}
-                    {scaleConnected && lastKg != null && (
+                    {scaleConnected && !scaleActive && lastKg != null && (
                       <p className="rounded-lg bg-gray-50 px-2.5 py-1.5 text-center text-[11px] text-gray-500">
                         Timbangan:{" "}
                         <span className="text-lg font-bold text-[#111827]">{fmt(lastKg)}</span> Kg
@@ -615,13 +615,6 @@ export function PbbEntryDialog({
                         Tambah Sak
                       </button>
                     </div>
-                  )}
-                  {potongan && (
-                    <p className="mt-1.5 text-[10px] text-gray-500">
-                      {potongan.mode === "tetap"
-                        ? `Potongan supplier: ${potongan.percent}%`
-                        : `Potongan acak ${potongan.lower / 10}%–${potongan.upper / 10}%`}
-                    </p>
                   )}
                 </div>
               </aside>

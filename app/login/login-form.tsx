@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { EyeIcon, EyeOffIcon, Loader2Icon, X } from "@/components/dashboard/icons";
@@ -44,24 +44,28 @@ export function LoginForm() {
     initialState,
   );
   const [showPassword, setShowPassword] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
+  // NIK disimpan di state supaya tidak hilang saat form "tergantikan" oleh
+  // modal error (percobaan gagal → tutup modal → user tidak perlu ketik ulang).
+  const [username, setUsername] = useState("");
+  // Error hanya disembunyikan untuk state hasil percobaan INI. Saat action
+  // berikutnya selesai, `state` jadi objek baru sehingga error terakhir tidak
+  // ikut tampil lagi (mis. saat login sukses → langsung redirect tanpa modal).
+  const [dismissedState, setDismissedState] = useState<LoginFormState | null>(
+    null,
+  );
   const usernameRef = useRef<HTMLInputElement>(null);
 
   const messageId = "login-message";
   const hasError = state.status === "error";
-  const showError = hasError && Boolean(state.message) && !dismissed;
+  const showError =
+    hasError && Boolean(state.message) && dismissedState !== state;
   const showNikInput = state.status === "nik_required" || state.status === "nik_not_found";
   const showNikConfirm = state.status === "nik_confirm" && Boolean(state.employee);
 
-  const dismissError = () => {
-    setDismissed(true);
+  const dismissError = useCallback(() => {
+    setDismissedState(state);
     requestAnimationFrame(() => usernameRef.current?.focus());
-  };
-
-  // Reset dismissed saat form disubmit (percobaan baru)
-  const handleSubmit = () => {
-    setDismissed(false);
-  };
+  }, [state]);
 
   // Enter atau Esc untuk menutup error modal
   useEffect(() => {
@@ -74,36 +78,79 @@ export function LoginForm() {
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [showError]);
+  }, [showError, dismissError]);
 
-  // Error modal overlay — hanya muncul sekali (percobaan pertama)
+  // Error modal — tampil sekali per percobaan login yang gagal
   if (showError) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60">
-        <div className="mx-4 flex w-full max-w-md flex-col items-center rounded-[2rem] bg-white px-8 py-12 text-center shadow-2xl">
-          <div className="mb-6 grid h-16 w-16 place-items-center rounded-full bg-red-500">
-            <X className="h-8 w-8 text-white stroke-[2.5]" />
-          </div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-950">
-            Login Gagal
-          </h2>
-          <p className="mt-2 text-base font-medium text-slate-600">
-            Invalid NIK or PASSWORD
-          </p>
+      <div className="login-backdrop fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
+        <div
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="login-error-title"
+          aria-describedby="login-error-desc"
+          className="login-card relative w-full max-w-sm overflow-hidden rounded-[28px] bg-white px-7 pb-7 pt-9 text-center shadow-2xl shadow-slate-900/20 ring-1 ring-slate-900/5"
+        >
+          <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-rose-500 via-red-500 to-orange-400" />
           <button
             type="button"
             onClick={dismissError}
-            className="mt-6 inline-flex h-10 items-center justify-center gap-2 rounded-full bg-slate-950 px-8 text-sm font-semibold text-white shadow-lg transition hover:bg-slate-800"
+            aria-label="Tutup pesan"
+            className="absolute right-3.5 top-4 rounded-full p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
           >
-            OK
+            <X className="h-4 w-4" />
           </button>
+
+          <div className="login-icon mx-auto grid h-16 w-16 place-items-center rounded-full bg-gradient-to-br from-rose-500 to-red-600 shadow-lg shadow-rose-500/30">
+            <X className="h-8 w-8 stroke-[3] text-white" />
+          </div>
+
+          <h2
+            id="login-error-title"
+            className="mt-5 text-xl font-bold tracking-tight text-slate-900"
+          >
+            Login Gagal
+          </h2>
+          <p
+            id="login-error-desc"
+            className="mt-2 text-sm leading-relaxed text-slate-500"
+          >
+            {state.message}
+          </p>
+
+          <div className="mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-xs leading-relaxed text-slate-500">
+            Periksa kembali{" "}
+            <span className="font-semibold text-slate-700">NIK</span> dan{" "}
+            <span className="font-semibold text-slate-700">password</span> Anda,
+            lalu coba lagi.
+          </div>
+
+          <button
+            type="button"
+            onClick={dismissError}
+            className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-slate-900 px-6 text-sm font-semibold text-white shadow-lg transition hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2"
+          >
+            Coba Lagi
+          </button>
+
+          <p className="mt-3 text-[11px] text-slate-400">
+            Tekan{" "}
+            <kbd className="rounded-md border border-slate-200 bg-white px-1.5 py-0.5 font-sans text-[10px] font-semibold text-slate-600 shadow-sm">
+              Esc
+            </kbd>{" "}
+            atau{" "}
+            <kbd className="rounded-md border border-slate-200 bg-white px-1.5 py-0.5 font-sans text-[10px] font-semibold text-slate-600 shadow-sm">
+              Enter
+            </kbd>{" "}
+            untuk menutup
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <form action={formAction} onSubmit={handleSubmit} noValidate className="space-y-4">
+    <form action={formAction} noValidate className="space-y-4">
       <div>
         <label
           htmlFor="username"
@@ -119,6 +166,8 @@ export function LoginForm() {
           autoComplete="off"
           autoFocus
           required
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
           aria-describedby={messageId}
           className="h-11 w-full rounded-xl border-0 bg-white px-4 text-sm text-slate-900 shadow-sm outline-none ring-0 placeholder:text-slate-400 focus:ring-2 focus:ring-rose-400"
         />
