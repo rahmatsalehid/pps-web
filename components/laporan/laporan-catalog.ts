@@ -140,6 +140,7 @@ export const LAPORAN_KATEGORI: LaporanKategori[] = [
     items: [
       { title: "Stok Barang Jadi", kode: "stok-barang-jadi" },
       { title: "Mutasi Barang Jadi", kode: "mutasi-barang-jadi" },
+      { title: "Stock Barang Jadi V2", kode: "stok-barang-jadi-v2" },
     ],
   },
   {
@@ -296,6 +297,13 @@ export const LAPORAN_REGISTRY: Record<string, LaporanSpec> = {
   "stok-mixer": stokSpec("stok-mixer", "Stok Mixer (Per Jenis)", "mixer"),
   "stok-furniture-wip": stokSpec("stok-furniture-wip", "Stok Furniture WIP", "furniture-wip"),
   "stok-barang-jadi": stokSpec("stok-barang-jadi", "Stok Barang Jadi", "barang-jadi"),
+  "stok-barang-jadi-v2": {
+    kode: "stok-barang-jadi-v2",
+    title: "Stock Barang Jadi V2",
+    endpoint: "",
+    kind: "pdf",
+    fields: [{ key: "tglAkhir", label: "Tanggal", type: "date", default: "today" }],
+  },
   "stok-reject": {
     kode: "stok-reject",
     title: "Stok Reject",

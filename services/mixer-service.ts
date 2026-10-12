@@ -214,6 +214,7 @@ export type SubmitInputsPayload = {
   washing?: { noWashing: string | null; noSak: number | null }[];
   gilingan?: { noGilingan: string | null }[];
   mixer?: { noMixer: string | null; noSak: number | null }[];
+  crusher?: { noCrusher: string | null }[];
   bbPartial?: (
     | {
         noBahanBaku: string | null;

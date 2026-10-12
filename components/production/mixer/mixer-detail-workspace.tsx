@@ -52,7 +52,7 @@ const PRIMARY = "#0277BD";
 const OUTPUT_TEAL = "#00796B";
 const BORDER = "#E2E6EA";
 
-type InputTab = "bb" | "broker" | "washing" | "gilingan" | "mixer";
+type InputTab = "bb" | "broker" | "washing" | "gilingan" | "mixer" | "crusher";
 
 type OutputTab = "mixer";
 
@@ -62,6 +62,7 @@ const INPUT_TAB_ORDER: InputTab[] = [
   "washing",
   "gilingan",
   "mixer",
+  "crusher",
 ];
 
 const TAB_LABELS: Record<InputTab, string> = {
@@ -70,6 +71,7 @@ const TAB_LABELS: Record<InputTab, string> = {
   washing: "Washing",
   gilingan: "Gilingan",
   mixer: "Mixer",
+  crusher: "Crusher",
 };
 
 const SHOW_SAK_METRIC: Record<InputTab, boolean> = {
@@ -78,6 +80,7 @@ const SHOW_SAK_METRIC: Record<InputTab, boolean> = {
   washing: true,
   gilingan: false,
   mixer: true,
+  crusher: false,
 };
 
 const PREFIX_TO_TAB: Record<string, InputTab> = {
@@ -86,6 +89,7 @@ const PREFIX_TO_TAB: Record<string, InputTab> = {
   "B.": "washing",
   "V.": "gilingan",
   "H.": "mixer",
+  "F.": "crusher",
 };
 
 function extractPrefix(code: string): string {
@@ -152,6 +156,7 @@ type TempStore = {
   washing: MixerSakItem[];
   gilingan: MixerBeratItem[];
   mixer: MixerSakItem[];
+  crusher: MixerBeratItem[];
 };
 
 const EMPTY_TEMP: TempStore = {
@@ -160,6 +165,7 @@ const EMPTY_TEMP: TempStore = {
   washing: [],
   gilingan: [],
   mixer: [],
+  crusher: [],
 };
 
 export function MixerDetailWorkspace({
@@ -233,7 +239,8 @@ export function MixerDetailWorkspace({
     temp.bb.length +
     temp.washing.length +
     temp.gilingan.length +
-    temp.mixer.length;
+    temp.mixer.length +
+    temp.crusher.length;
   const isLockedOrComplete = header?.isLocked === true || header?.isComplete === true;
 
   const showSnack = useCallback((msg: string, color = "#16a34a") => {
@@ -487,7 +494,7 @@ export function MixerDetailWorkspace({
         return;
       }
     }
-    const beratTabs: Array<"gilingan"> = ["gilingan"];
+    const beratTabs: Array<"gilingan" | "crusher"> = ["gilingan", "crusher"];
     for (const tab of beratTabs) {
       const incomplete = temp[tab].find((e) => e.noLabel == null);
       if (incomplete) {
@@ -546,6 +553,10 @@ export function MixerDetailWorkspace({
           berat: e.berat,
         }));
       }
+    }
+    if (temp.crusher.length) {
+      // Crusher hanya input utuh (tidak ada partial di MixerProduksiInputCrusher)
+      payload.crusher = temp.crusher.map((e) => ({ noCrusher: e.noLabel }));
     }
     if (temp.mixer.length) {
       const full = temp.mixer.filter((e) => !isSakPartial(e));
@@ -741,19 +752,27 @@ export function MixerDetailWorkspace({
       return;
     }
 
+    // Tab berbasis berat per label: gilingan / crusher
+    const beratTab: "gilingan" | "crusher" = tab === "crusher" ? "crusher" : "gilingan";
     const existing = new Set(
-      temp.gilingan.map((b) => `${b.noPartial ?? ""}|${b.noLabel ?? ""}`),
+      temp[beratTab].map((b) => `${b.noPartial ?? ""}|${b.noLabel ?? ""}`),
     );
     const next: MixerBeratItem[] = [];
     for (const row of rows) {
       const item: MixerBeratItem = {
-        noLabel: asStr(row.noGilingan ?? row.noLabel ?? row.NoGilingan),
-        noPartial: asStr(
-          row.noPartial ??
-            row.NoPartial ??
-            row.noGilinganPartial ??
-            row.NoGilinganPartial,
-        ),
+        noLabel:
+          beratTab === "crusher"
+            ? asStr(row.noCrusher ?? row.noLabel ?? row.NoCrusher)
+            : asStr(row.noGilingan ?? row.noLabel ?? row.NoGilingan),
+        noPartial:
+          beratTab === "crusher"
+            ? null
+            : asStr(
+                row.noPartial ??
+                  row.NoPartial ??
+                  row.noGilinganPartial ??
+                  row.NoGilinganPartial,
+              ),
         berat: asNum(row.berat ?? row.Berat),
         beratAct: asNum(row.beratAct ?? row.BeratAct),
         isPartial: asBool(row.isPartial ?? row.IsPartial),
@@ -762,7 +781,7 @@ export function MixerDetailWorkspace({
         dateUsage: asStr(row.dateUsage ?? row.DateUsage),
       };
       if (item.noLabel == null) {
-        setScanError(`Data label ${TAB_LABELS.gilingan} tidak lengkap.`);
+        setScanError(`Data label ${TAB_LABELS[beratTab]} tidak lengkap.`);
         setScanLoading(false);
         return;
       }
@@ -772,12 +791,12 @@ export function MixerDetailWorkspace({
       next.push(item);
     }
     if (next.length === 0) {
-      setScanError(`Label ${TAB_LABELS.gilingan} sudah ada di temp.`);
+      setScanError(`Label ${TAB_LABELS[beratTab]} sudah ada di temp.`);
       setScanLoading(false);
       return;
     }
-    setTemp((p) => ({ ...p, gilingan: [...p.gilingan, ...next] }));
-    showSnack(`${next.length} ${TAB_LABELS.gilingan} ditambahkan ke temp`);
+    setTemp((p) => ({ ...p, [beratTab]: [...p[beratTab], ...next] }));
+    showSnack(`${next.length} ${TAB_LABELS[beratTab]} ditambahkan ke temp`);
     setScanOpen(false);
     setScanCode("");
     setScanLoading(false);
@@ -817,6 +836,9 @@ export function MixerDetailWorkspace({
       } else {
         payload.gilingan = [{ noGilingan: b.noLabel }];
       }
+    } else if (tab === "crusher") {
+      const b = item as MixerBeratItem;
+      payload.crusher = [{ noCrusher: b.noLabel }];
     } else {
       const s = item as MixerSakItem;
       if (isSakPartial(s)) {
@@ -845,6 +867,7 @@ export function MixerDetailWorkspace({
   const allWashing = inputs?.washing ?? [];
   const allGilingan = inputs?.gilingan ?? [];
   const allMixer = inputs?.mixer ?? [];
+  const allCrusher = inputs?.crusher ?? [];
 
   type Marked<T> = { item: T; isTemp: boolean };
 
@@ -934,7 +957,7 @@ export function MixerDetailWorkspace({
   }
 
   function buildBeratGroups(
-    tab: "gilingan",
+    tab: "gilingan" | "crusher",
     dbItems: readonly MixerBeratItem[],
   ): InputLabelGroup[] {
     const marked = markedList(dbItems, temp[tab]);
@@ -974,6 +997,7 @@ export function MixerDetailWorkspace({
   const washingGroups = buildSakGroups("washing", allWashing);
   const gilinganGroups = buildBeratGroups("gilingan", allGilingan);
   const mixerGroups = buildSakGroups("mixer", allMixer);
+  const crusherGroups = buildBeratGroups("crusher", allCrusher);
 
   const groupsByTab: Record<InputTab, InputLabelGroup[]> = {
     broker: brokerGroups,
@@ -981,6 +1005,7 @@ export function MixerDetailWorkspace({
     washing: washingGroups,
     gilingan: gilinganGroups,
     mixer: mixerGroups,
+    crusher: crusherGroups,
   };
 
   const groupCountByTab: Record<InputTab, number> = {
@@ -989,6 +1014,7 @@ export function MixerDetailWorkspace({
     washing: washingGroups.length,
     gilingan: gilinganGroups.length,
     mixer: mixerGroups.length,
+    crusher: crusherGroups.length,
   };
 
   const activeGroups: InputLabelGroup[] = groupsByTab[selectedInputTab];
@@ -1013,6 +1039,8 @@ export function MixerDetailWorkspace({
         return catStats(washingGroups.length, allWashing, true);
       case "gilingan":
         return catStats(gilinganGroups.length, allGilingan, false);
+      case "crusher":
+        return catStats(crusherGroups.length, allCrusher, false);
       default:
         return catStats(mixerGroups.length, allMixer, true);
     }
@@ -1026,6 +1054,7 @@ export function MixerDetailWorkspace({
     ...allWashing,
     ...allGilingan,
     ...allMixer,
+    ...allCrusher,
   ];
   const grandBerat = allDbItems.reduce((s, i) => s + (i.berat ?? 0), 0);
   const grandSak = allBroker.length + allBb.length + allWashing.length + allMixer.length;
@@ -1034,7 +1063,8 @@ export function MixerDetailWorkspace({
     bbGroups.length +
     washingGroups.length +
     gilinganGroups.length +
-    mixerGroups.length;
+    mixerGroups.length +
+    crusherGroups.length;
 
   const outputTabCount = outputs.length;
   const outputTotalBerat = outputs.reduce((s, o) => s + o.totalBerat, 0);
