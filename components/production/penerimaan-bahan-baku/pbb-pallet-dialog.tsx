@@ -21,7 +21,7 @@ import { printBsLabelAction } from "@/app/(app)/operasional/bongkar-susun/action
 import { printPdfBase64 } from "@/components/operasional/bongkar-susun/print-pdf";
 import { Loader2Icon } from "@/components/dashboard/icons";
 import { CloseIcon, LabelIcon } from "./pbb-icons";
-import { applyPotongan, fmt } from "./pbb-potongan";
+import { beratSetelahPotongan, fmt } from "./pbb-potongan";
 import { ScaleConnection, isWebSerialSupported, webSerialUnsupportedReason } from "./pbb-scale";
 import { useScaleDisplay, type DisplayState } from "./pbb-display";
 
@@ -219,7 +219,7 @@ export function PbbPalletDialog({
   async function addSakValue(act: number) {
     if (!(act > 0)) return setError("Berat tidak valid");
     if (!potongan) return setError("Aturan potongan supplier belum dimuat");
-    const berat = applyPotongan(act, potongan);
+    const berat = beratSetelahPotongan(act, potongan, idJenis);
     setLastBerat(berat);
     await run(
       () => addPbbSaksAction(noPenerimaan, row.noBahanBaku, row.noPallet, [{ berat, beratAct: act, isLembab }]),

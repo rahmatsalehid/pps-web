@@ -34,7 +34,7 @@ export default async function PasangKunciDetailPage({
   let canLock = false;
   try {
     const me = await fetchMyPermissions(token);
-    canLock = hasPermission(me.data.permissions, "produksi_pasangkunci:lock");
+    canLock = hasPermission(me.data.permissions, "pasangkunci:lock");
   } catch {
     canLock = false;
   }

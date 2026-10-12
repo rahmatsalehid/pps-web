@@ -34,7 +34,7 @@ export default async function StampingDetailPage({
   let canLock = false;
   try {
     const me = await fetchMyPermissions(token);
-    canLock = hasPermission(me.data.permissions, "produksi_stamping:lock");
+    canLock = hasPermission(me.data.permissions, "hotstamping:lock");
   } catch {
     canLock = false;
   }

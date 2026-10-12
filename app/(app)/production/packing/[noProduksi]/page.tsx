@@ -34,7 +34,7 @@ export default async function PackingDetailPage({
   let canLock = false;
   try {
     const me = await fetchMyPermissions(token);
-    canLock = hasPermission(me.data.permissions, "produksi_packing:lock");
+    canLock = hasPermission(me.data.permissions, "packing:lock");
   } catch {
     canLock = false;
   }

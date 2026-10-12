@@ -34,7 +34,7 @@ export default async function InjectDetailPage({
   let canLock = false;
   try {
     const me = await fetchMyPermissions(token);
-    canLock = hasPermission(me.data.permissions, "produksi_inject:lock");
+    canLock = hasPermission(me.data.permissions, "injectproduksi:lock");
   } catch {
     canLock = false;
   }

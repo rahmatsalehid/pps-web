@@ -17,3 +17,15 @@ export function applyPotongan(beratAct: number, rule: PbbPotongan): number {
   }
   return round2(beratAct * (1 - percent / 100));
 }
+
+/** Jenis dengan MstBahanBaku.IsDisableMinMax = 1: potongan dilewati (berat = beratAct). */
+export function beratSetelahPotongan(
+  beratAct: number,
+  rule: PbbPotongan,
+  idJenis: number | null | undefined,
+): number {
+  if (idJenis != null && rule.disableMinMaxIds.includes(idJenis)) {
+    return round2(beratAct);
+  }
+  return applyPotongan(beratAct, rule);
+}

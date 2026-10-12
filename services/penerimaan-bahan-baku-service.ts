@@ -328,10 +328,12 @@ export type PbbFormOptions = {
  * Aturan potongan berat supplier (sama seperti form VB):
  * - "tetap": persen tetap dari MstSupplier.Potongan
  * - "acak": persen diundi bilangan bulat lower..upper lalu dibagi 10
+ * disableMinMaxIds: jenis dengan MstBahanBaku.IsDisableMinMax = 1
+ * (potongan dilewati untuk jenis ini).
  */
 export type PbbPotongan =
-  | { mode: "tetap"; percent: number }
-  | { mode: "acak"; lower: number; upper: number };
+  | { mode: "tetap"; percent: number; disableMinMaxIds: number[] }
+  | { mode: "acak"; lower: number; upper: number; disableMinMaxIds: number[] };
 
 export type PbbSakPayload = {
   noSak: number;
@@ -395,10 +397,20 @@ export async function fetchPbbPotongan(
   }>(`/penerimaan-bahan-baku/potongan/${idSupplier}`, t);
   await expectOk(res.status, res.data, "Gagal memuat aturan potongan supplier");
   const d = res.data.data ?? {};
+  const disableMinMaxIds = Array.isArray(d["disableMinMaxIds"])
+    ? d["disableMinMaxIds"]
+        .map((v) => Number(v))
+        .filter((n) => Number.isInteger(n))
+    : [];
   if (asStr(d["mode"]) === "tetap") {
-    return { mode: "tetap", percent: asFloat(d["percent"]) };
+    return { mode: "tetap", percent: asFloat(d["percent"]), disableMinMaxIds };
   }
-  return { mode: "acak", lower: asInt(d["lower"]), upper: asInt(d["upper"]) };
+  return {
+    mode: "acak",
+    lower: asInt(d["lower"]),
+    upper: asInt(d["upper"]),
+    disableMinMaxIds,
+  };
 }
 
 export async function addPbbPallets(

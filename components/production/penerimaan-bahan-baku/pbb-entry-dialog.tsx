@@ -17,7 +17,7 @@ import { AddIcon, CloseIcon, ScaleIcon } from "./pbb-icons";
 import { PbbStatusDialog } from "./pbb-status-dialog";
 import { ScaleConnection, isWebSerialSupported, webSerialUnsupportedReason } from "./pbb-scale";
 import { nowClock, useScaleDisplay, type DisplayState } from "./pbb-display";
-import { applyPotongan, fmt } from "./pbb-potongan";
+import { beratSetelahPotongan, fmt } from "./pbb-potongan";
 
 const BORDER = "#E2E6EA";
 
@@ -201,7 +201,7 @@ export function PbbEntryDialog({
         ...prev,
         [`${activePallet.id}:${noSakNext}`]: nowClock(),
       }));
-      const berat = applyPotongan(beratAct, potongan);
+      const berat = beratSetelahPotongan(beratAct, potongan, activePallet.idJenis);
       setLastBerat(berat);
       setPallets((prev) =>
         prev.map((p) => {
