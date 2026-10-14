@@ -27,7 +27,7 @@ type UserForm = {
   employeeId: string;
   companyId: string;
   nik: string;
-  idUGroup: string;
+  idUGroups: string[];
   resetPassword: boolean;
 };
 
@@ -50,7 +50,7 @@ function emptyUserForm(): UserForm {
     employeeId: "",
     companyId: "",
     nik: "",
-    idUGroup: "",
+    idUGroups: [],
     resetPassword: false,
   };
 }
@@ -193,7 +193,7 @@ export function UserWorkspace({
       employeeId: String(row.employeeId),
       companyId: row.companyId,
       nik: row.nik,
-      idUGroup: res.rows[0] ? String(res.rows[0].idUGroup) : "",
+      idUGroups: res.rows.map((g) => String(g.idUGroup)),
       resetPassword: false,
     });
     setSelectedId(row.idUsername);
@@ -253,9 +253,9 @@ export function UserWorkspace({
     }
     const empId = parseInt(form.employeeId, 10);
     if (!empId || empId <= 0) return "Employee ID harus berupa angka.";
-    if (mode === "edit") {
-      if (!form.idUGroup)
-        return "Pilih Group Permission (1 group) untuk user ini.";
+    if (mode === "edit" || mode === "create") {
+      if (!form.idUGroups.length)
+        return "Pilih minimal 1 Group Permission untuk user ini.";
     }
     return null;
   }
@@ -267,7 +267,9 @@ export function UserWorkspace({
       return;
     }
     const employeeId = parseInt(form.employeeId, 10);
-    const idUGroup = form.idUGroup ? [parseInt(form.idUGroup, 10)] : [];
+    const idUGroup = form.idUGroups
+      .map((v) => parseInt(v, 10))
+      .filter((v) => v > 0);
 
     setBusy(true);
     setError(null);
@@ -468,8 +470,21 @@ export function UserWorkspace({
                       <td className="px-2 py-2 text-gray-600">
                         {row.nik || "-"}
                       </td>
-                      <td className="px-2 py-2 text-gray-700">
-                        {row.groupName || "-"}
+                      <td className="px-2 py-2">
+                        {row.groupName ? (
+                          <span className="flex flex-wrap gap-1">
+                            {row.groupName.split(",").map((g, i) => (
+                              <span
+                                key={`${row.idUsername}-g-${i}`}
+                                className="rounded-full bg-blue-50 px-2 py-0.5 text-[10.5px] font-semibold text-blue-700"
+                              >
+                                {g.trim()}
+                              </span>
+                            ))}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
                       </td>
                       <td className="px-2 py-2">
                         <span
@@ -557,23 +572,6 @@ export function UserWorkspace({
                   className="w-full rounded-lg border bg-gray-50 px-3 py-2 text-[13px] text-gray-700 outline-none"
                   style={{ borderColor: BORDER }}
                 />
-              </Field>
-              <Field label="Group Permission" required>
-                <select
-                  value={form.idUGroup}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, idUGroup: e.target.value }))
-                  }
-                  className="w-full rounded-lg border px-3 py-2 text-[13px] outline-none focus:ring-2"
-                  style={{ borderColor: BORDER }}
-                >
-                  <option value="">-- Pilih Group --</option>
-                  {groups.map((g) => (
-                    <option key={g.idUGroup} value={String(g.idUGroup)}>
-                      {g.uGroupName}
-                    </option>
-                  ))}
-                </select>
               </Field>
               <Field label="Nama Depan" required>
                 <input
@@ -706,6 +704,51 @@ export function UserWorkspace({
                   </label>
                 </div>
               )}
+              <div className="col-span-2">
+                <Field label="Group Permission" required>
+                  <div
+                    className="max-h-40 overflow-y-auto rounded-lg border bg-white px-2 py-1.5"
+                    style={{ borderColor: BORDER }}
+                  >
+                    {groups.length === 0 ? (
+                      <p className="py-1 text-[12px] text-gray-400">
+                        Memuat group…
+                      </p>
+                    ) : (
+                      groups.map((g) => {
+                        const checked = form.idUGroups.includes(
+                          String(g.idUGroup),
+                        );
+                        return (
+                          <label
+                            key={g.idUGroup}
+                            className="flex cursor-pointer items-center gap-2 rounded px-1 py-1 hover:bg-blue-50"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() =>
+                                setForm((f) => ({
+                                  ...f,
+                                  idUGroups: checked
+                                    ? f.idUGroups.filter(
+                                        (v) => v !== String(g.idUGroup),
+                                      )
+                                    : [...f.idUGroups, String(g.idUGroup)],
+                                }))
+                              }
+                              className="h-3.5 w-3.5 accent-[#1E6FD9]"
+                            />
+                            <span className="text-[12px] text-gray-700">
+                              {g.uGroupName}
+                            </span>
+                          </label>
+                        );
+                      })
+                    )}
+                  </div>
+                </Field>
+              </div>
             </div>
 
             <ModeHint mode={mode} />

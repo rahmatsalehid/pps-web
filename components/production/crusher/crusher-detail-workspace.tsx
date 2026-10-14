@@ -9,7 +9,9 @@ import type {
   CrusherInputs,
   CrusherOutput,
   CrusherProduction,
+  CrusherRejectItem,
   CrusherType,
+  SubmitInputsPayload,
 } from "@/services/crusher-service";
 import {
   completeCrusherAction,
@@ -25,6 +27,7 @@ import {
   uncompleteCrusherAction,
 } from "@/app/(app)/production/crusher/actions";
 import { ConfirmDialog } from "./confirm-dialog";
+import { CameraScanner } from "./camera-scanner";
 import { CrusherOutputFormDialog } from "./crusher-output-form-dialog";
 import { CrusherOutputDetailDialog } from "./crusher-output-detail-dialog";
 import {
@@ -49,7 +52,27 @@ import {
 const PRIMARY = "#0277BD";
 const OUTPUT_TEAL = "#00796B";
 
-type InputTab = "bb" | "bonggolan";
+type InputTab = "bb" | "bonggolan" | "reject";
+
+const INPUT_TAB_ORDER: InputTab[] = ["bb", "bonggolan", "reject"];
+
+const KODE_TO_TAB: Record<string, InputTab> = {
+  bahanbaku: "bb",
+  bb: "bb",
+  bonggolan: "bonggolan",
+  reject: "reject",
+};
+
+function isRejectPartial(item: CrusherRejectItem): boolean {
+  return item.isPartial === true || (item.noRejectPartial ?? "").trim().length > 0;
+}
+
+/** Grouping key Reject — nomor partial bila ada, jika tidak NoReject. */
+function rejectTitleKey(item: CrusherRejectItem): string {
+  const partial = (item.noRejectPartial ?? "").trim();
+  if (partial) return partial;
+  return item.noReject ?? "-";
+}
 
 /** Grouping key BB — sama dengan bbTitleKey di tablet. */
 function bbTitleKey(item: CrusherBbItem): string {
@@ -113,6 +136,7 @@ export function CrusherDetailWorkspace({
   const [scanCode, setScanCode] = useState("");
   const [scanError, setScanError] = useState<string | null>(null);
   const [scanLoading, setScanLoading] = useState(false);
+  const [cameraOn, setCameraOn] = useState(false);
 
   const [confirmComplete, setConfirmComplete] = useState(false);
   const [confirmUncomplete, setConfirmUncomplete] = useState(false);
@@ -142,9 +166,10 @@ export function CrusherDetailWorkspace({
   // Temp items (unsaved)
   const [tempBb, setTempBb] = useState<CrusherBbItem[]>([]);
   const [tempBonggolan, setTempBonggolan] = useState<CrusherBonggolanItem[]>([]);
+  const [tempReject, setTempReject] = useState<CrusherRejectItem[]>([]);
 
   const router = useRouter();
-  const totalTempCount = tempBb.length + tempBonggolan.length;
+  const totalTempCount = tempBb.length + tempBonggolan.length + tempReject.length;
   const isLockedOrComplete = header?.isLocked === true || header?.isComplete === true;
 
   const showSnack = useCallback((msg: string, color = "#16a34a") => {
@@ -166,15 +191,10 @@ export function CrusherDetailWorkspace({
       setFormulaOutputs(frm.outputs);
       setAllowedKodes(new Set(frm.kodes));
       const kodes = frm.kodes;
-      const map: Record<string, InputTab> = {
-        bahanbaku: "bb",
-        bb: "bb",
-        bonggolan: "bonggolan",
-      };
       if (kodes.length > 0) {
-        const first = ["bb", "bonggolan"].find((tab) =>
-          kodes.some((k) => map[k] === tab),
-        ) as InputTab | undefined;
+        const first = INPUT_TAB_ORDER.find((tab) =>
+          kodes.some((k) => KODE_TO_TAB[k] === tab),
+        );
         if (first) setSelectedInputTab(first);
       }
     }
@@ -197,15 +217,10 @@ export function CrusherDetailWorkspace({
         setFormulaOutputs(frm.outputs);
         setAllowedKodes(new Set(frm.kodes));
         const kodes = frm.kodes;
-        const map: Record<string, InputTab> = {
-          bahanbaku: "bb",
-          bb: "bb",
-          bonggolan: "bonggolan",
-        };
         if (kodes.length > 0) {
-          const first = ["bb", "bonggolan"].find((tab) =>
-            kodes.some((k) => map[k] === tab),
-          ) as InputTab | undefined;
+          const first = INPUT_TAB_ORDER.find((tab) =>
+            kodes.some((k) => KODE_TO_TAB[k] === tab),
+          );
           if (first) setSelectedInputTab(first);
         }
       }
@@ -222,13 +237,8 @@ export function CrusherDetailWorkspace({
 
   function isTabAllowed(tab: InputTab): boolean {
     if (allowedKodes == null) return true;
-    const map: Record<string, InputTab> = {
-      bahanbaku: "bb",
-      bb: "bb",
-      bonggolan: "bonggolan",
-    };
     for (const k of allowedKodes) {
-      if (map[k] === tab) return true;
+      if (KODE_TO_TAB[k] === tab) return true;
     }
     return false;
   }
@@ -434,6 +444,25 @@ export function CrusherDetailWorkspace({
       }
       payload.bonggolan = tempBonggolan.map((e) => ({ noBonggolan: e.noBonggolan }));
     }
+    if (tempReject.length) {
+      const full = tempReject.filter((e) => !isRejectPartial(e));
+      const partial = tempReject.filter(isRejectPartial);
+      if (full.length) {
+        payload.reject = full.map((e) => ({ noReject: e.noReject }));
+      }
+      if (partial.length) {
+        const rows: NonNullable<SubmitInputsPayload["rejectPartial"]> = [];
+        for (const e of partial) {
+          if ((e.noReject ?? "").trim() && e.berat != null) {
+            rows.push({ noReject: e.noReject, berat: e.berat });
+          } else {
+            const code = (e.noRejectPartial ?? "").trim();
+            if (code) rows.push({ noRejectPartial: code });
+          }
+        }
+        if (rows.length) payload.rejectPartial = rows;
+      }
+    }
 
     const res = await submitCrusherInputsAction(
       noProduksi,
@@ -442,6 +471,7 @@ export function CrusherDetailWorkspace({
     if (res.status === "success") {
       setTempBb([]);
       setTempBonggolan([]);
+      setTempReject([]);
       showSnack("Data berhasil disimpan");
       reload();
     } else {
@@ -457,21 +487,26 @@ export function CrusherDetailWorkspace({
   function doClearTemp() {
     setTempBb([]);
     setTempBonggolan([]);
+    setTempReject([]);
     setShowClearTemp(false);
     showSnack("Semua temp items dihapus");
   }
 
   // ── Scan / lookup ──────────────────────────────────────────────────────────
 
-  async function handleScanSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const code = scanCode.trim();
+  /** Proses kode label (manual atau hasil kamera). fromCamera=true → dialog tetap buka. */
+  async function processScanCode(rawCode: string, fromCamera = false) {
+    const code = rawCode.trim();
     if (!code) return;
     setScanLoading(true);
     setScanError(null);
 
-    // prefix formula validation
-    const prefix = code.length >= 2 ? code.substring(0, 2).toUpperCase() : "";
+    const upperCode = code.toUpperCase();
+    const prefix = upperCode.startsWith("BF.")
+      ? "BF."
+      : upperCode.length >= 2
+        ? upperCode.substring(0, 2)
+        : "";
     if (formulaOutputs.length > 0) {
       const prefixAllowed = formulaOutputs.some((o) =>
         o.formulas.some((f) => f.prefixLabel.toUpperCase() === prefix),
@@ -488,7 +523,7 @@ export function CrusherDetailWorkspace({
       }
     }
 
-    if (prefix !== "A." && prefix !== "M.") {
+    if (prefix !== "A." && prefix !== "M." && prefix !== "BF.") {
       setScanError(`Prefix label "${prefix}" belum didukung.`);
       setScanLoading(false);
       return;
@@ -567,8 +602,53 @@ export function CrusherDetailWorkspace({
       }
       setTempBb((prev) => [...prev, ...next]);
       showSnack(`${next.length} sak bahan baku ditambahkan ke temp`);
-      setScanOpen(false);
       setScanCode("");
+      if (!fromCamera) {
+        setScanOpen(false);
+        setCameraOn(false);
+      }
+    } else if (prefix === "BF.") {
+      const keyOf = (r: CrusherRejectItem) =>
+        `${r.noRejectPartial ?? ""}|${r.noReject ?? ""}`;
+      const existing = new Set(tempReject.map(keyOf));
+      const next: CrusherRejectItem[] = [];
+      for (const row of rows) {
+        const item: CrusherRejectItem = {
+          noReject: asStr(row.noReject ?? row.NoReject),
+          noRejectPartial: asStr(
+            row.noRejectPartial ?? row.NoRejectPartial ?? row.noPartial ?? row.NoPartial,
+          ),
+          berat: asNum(row.berat ?? row.Berat),
+          beratAct: asNum(row.beratAct ?? row.BeratAct),
+          isPartial: asBool(row.isPartial ?? row.IsPartial),
+          idJenis: asNum(row.idReject ?? row.IdReject ?? row.idJenis ?? row.IdJenis),
+          namaJenis: asStr(
+            row.namaReject ?? row.NamaReject ?? row.namaJenis ?? row.NamaJenis,
+          ),
+          dateUsage: asStr(row.dateUsage ?? row.DateUsage),
+        };
+        if (item.noReject == null) {
+          setScanError("Data label reject tidak lengkap.");
+          setScanLoading(false);
+          return;
+        }
+        const key = keyOf(item);
+        if (existing.has(key)) continue;
+        existing.add(key);
+        next.push(item);
+      }
+      if (next.length === 0) {
+        setScanError("Label reject sudah ada di temp.");
+        setScanLoading(false);
+        return;
+      }
+      setTempReject((prev) => [...prev, ...next]);
+      showSnack(`${next.length} reject ditambahkan ke temp`);
+      setScanCode("");
+      if (!fromCamera) {
+        setScanOpen(false);
+        setCameraOn(false);
+      }
     } else {
       const existing = new Set(tempBonggolan.map((g) => g.noBonggolan));
       const next: CrusherBonggolanItem[] = [];
@@ -597,17 +677,33 @@ export function CrusherDetailWorkspace({
       }
       setTempBonggolan((prev) => [...prev, ...next]);
       showSnack(`${next.length} bonggolan ditambahkan ke temp`);
-      setScanOpen(false);
       setScanCode("");
+      if (!fromCamera) {
+        setScanOpen(false);
+        setCameraOn(false);
+      }
     }
     setScanLoading(false);
   }
 
+  async function handleScanSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    await processScanCode(scanCode, false);
+  }
+
   // ── Delete input item ──────────────────────────────────────────────────────
 
-  async function deleteInputItem(kind: "bb" | "bonggolan", item: unknown) {
+  async function deleteInputItem(kind: InputTab, item: unknown) {
     const payload: Record<string, unknown[]> = {};
-    if (kind === "bb") {
+    if (kind === "reject") {
+      const r = item as CrusherRejectItem;
+      if (isRejectPartial(r)) {
+        const code = (r.noRejectPartial ?? "").trim();
+        if (code) payload.rejectPartial = [{ noRejectPartial: code }];
+      } else {
+        payload.reject = [{ noReject: r.noReject }];
+      }
+    } else if (kind === "bb") {
       const b = item as CrusherBbItem;
       const partial = (b.noBBPartial ?? "").trim();
       if (partial) payload.bbPartial = [{ noBBPartial: partial }];
@@ -637,6 +733,8 @@ export function CrusherDetailWorkspace({
   // Gabung temp + DB (temp dulu — urutan sama seperti tablet)
   const bbAll: CrusherBbItem[] = [...tempBb, ...allBb];
   const bonggolanAll: CrusherBonggolanItem[] = [...tempBonggolan, ...allBonggolan];
+  const allReject = inputs?.reject ?? [];
+  const rejectAll: CrusherRejectItem[] = [...tempReject, ...allReject];
 
   type Marked<T> = { item: T; isTemp: boolean };
 
@@ -653,8 +751,16 @@ export function CrusherDetailWorkspace({
     ];
   }
 
+  function markedReject(): Marked<CrusherRejectItem>[] {
+    return [
+      ...tempReject.map((item) => ({ item, isTemp: true })),
+      ...allReject.map((item) => ({ item, isTemp: false })),
+    ];
+  }
+
   function removeTempItem(tab: InputTab, item: unknown) {
     if (tab === "bb") setTempBb((p) => p.filter((x) => x !== item));
+    else if (tab === "reject") setTempReject((p) => p.filter((x) => x !== item));
     else setTempBonggolan((p) => p.filter((x) => x !== item));
   }
 
@@ -724,21 +830,51 @@ export function CrusherDetailWorkspace({
     });
   }
 
+  function buildRejectGroups(): InputLabelGroup[] {
+    const groups = groupBy(markedReject(), ({ item }) => rejectTitleKey(item));
+    return Array.from(groups.entries()).map(([key, entries]) => {
+      const chips: InputSakChip[] = entries.map(({ item, isTemp }, idx) => ({
+        id: `${key}-rj-${idx}`,
+        label: (item.noRejectPartial ?? "").trim() || item.noReject || "-",
+        berat: item.berat,
+        isTemp,
+        isPartial: isRejectPartial(item),
+        onDelete:
+          isTemp && !isLockedOrComplete
+            ? () => removeTempItem("reject", item)
+            : !isTemp && !isLockedOrComplete
+              ? () => void deleteInputItem("reject", item)
+              : undefined,
+      }));
+      return {
+        key,
+        title: entries[0]?.item.namaJenis || "—",
+        subtitle: key,
+        sakCount: entries.length,
+        berat: entries.reduce((s, { item }) => s + (item.berat ?? 0), 0),
+        hasPartial: entries.some(({ item }) => isRejectPartial(item)),
+        isTemp: entries.some(({ isTemp }) => isTemp),
+        chips,
+        showSakMetric: false,
+      };
+    });
+  }
+
   const bbGroups = buildBbGroups();
   const bonggolanGroups = buildBonggolanGroups();
+  const rejectGroups = buildRejectGroups();
   const groupCountByTab: Record<InputTab, number> = {
     bb: bbGroups.length,
     bonggolan: bonggolanGroups.length,
+    reject: rejectGroups.length,
+  };
+  const groupsByTab: Record<InputTab, InputLabelGroup[]> = {
+    bb: bbGroups,
+    bonggolan: bonggolanGroups,
+    reject: rejectGroups,
   };
 
-  const activeGroups: InputLabelGroup[] = (() => {
-    switch (selectedInputTab) {
-      case "bonggolan":
-        return bonggolanGroups;
-      default:
-        return bbGroups;
-    }
-  })();
+  const activeGroups: InputLabelGroup[] = groupsByTab[selectedInputTab];
 
   const catStats = (labels: number, items: readonly { berat?: number | null }[]) => ({
     labels,
@@ -747,18 +883,25 @@ export function CrusherDetailWorkspace({
 
   const bbStats = catStats(bbGroups.length, bbAll);
   const bonggolanStats = catStats(bonggolanGroups.length, bonggolanAll);
+  const rejectStats = catStats(rejectGroups.length, rejectAll);
 
   const grandBerat =
     bbAll.reduce((s, i) => s + (i.berat ?? 0), 0) +
-    bonggolanAll.reduce((s, i) => s + (i.berat ?? 0), 0);
-  const totalLabel = bbGroups.length + bonggolanGroups.length;
+    bonggolanAll.reduce((s, i) => s + (i.berat ?? 0), 0) +
+    rejectAll.reduce((s, i) => s + (i.berat ?? 0), 0);
+  const totalLabel = bbGroups.length + bonggolanGroups.length + rejectGroups.length;
 
   const activeCatLabel: Record<InputTab, string> = {
     bb: "BB",
     bonggolan: "Bonggolan",
+    reject: "Reject",
   };
-  const activeCatStats =
-    selectedInputTab === "bb" ? bbStats : bonggolanStats;
+  const statsByTab: Record<InputTab, { labels: number; berat: number }> = {
+    bb: bbStats,
+    bonggolan: bonggolanStats,
+    reject: rejectStats,
+  };
+  const activeCatStats = statsByTab[selectedInputTab];
 
   // Output selalu 1 kategori tab: "Crusher" (bukan namaJenis produk).
   const outputTabCount = outputs.length;
@@ -956,17 +1099,15 @@ export function CrusherDetailWorkspace({
               className="flex gap-1 rounded-t-xl border px-1.5 pt-1.5"
               style={{ borderColor: `${PRIMARY}52`, backgroundColor: "#ECEFF3" }}
             >
-              {(["bb", "bonggolan"] as InputTab[])
+              {INPUT_TAB_ORDER
                 .filter((t) => isTabAllowed(t))
                 .map((tab) => {
                   const labels: Record<InputTab, string> = {
                     bb: "Input BB",
                     bonggolan: "Input Bonggolan",
+                    reject: "Input Reject",
                   };
-                  const counts: Record<InputTab, number> = {
-                    bb: groupCountByTab.bb,
-                    bonggolan: groupCountByTab.bonggolan,
-                  };
+                  const counts = groupCountByTab;
                   const active = selectedInputTab === tab;
                   return (
                     <button
@@ -1104,6 +1245,7 @@ export function CrusherDetailWorkspace({
                     type="button"
                     onClick={() => {
                       setScanError(null);
+                      setCameraOn(false);
                       setScanOpen(true);
                     }}
                     disabled={isLockedOrComplete}
@@ -1313,32 +1455,70 @@ export function CrusherDetailWorkspace({
               </div>
               <button
                 type="button"
-                onClick={() => setScanOpen(false)}
+                onClick={() => {
+                  setScanOpen(false);
+                  setCameraOn(false);
+                  setScanError(null);
+                  setScanCode("");
+                }}
                 className="rounded p-1 hover:bg-white/15"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="p-5">
-              <p className="mb-2 text-xs text-gray-500">
-                Masukkan atau scan kode label (contoh: A.XXXXXXXXXX / M.XXXXXXXXXX)
-              </p>
-              <input
-                autoFocus
-                value={scanCode}
-                onChange={(e) => setScanCode(e.target.value)}
-                placeholder="X.XXXXXXXXXX"
-                className="h-11 w-full rounded-xl border border-gray-200 px-4 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-              />
+            <div className="space-y-3 p-5">
+              {cameraOn && (
+                <div className="space-y-2">
+                  <CameraScanner
+                    paused={scanLoading}
+                    onDetected={(t) => {
+                      setScanCode(t);
+                      void processScanCode(t, true);
+                    }}
+                  />
+                  <p className="text-center text-[11px] text-gray-500">
+                    Arahkan kamera ke barcode/QR. Hasil terbaca otomatis diproses.
+                  </p>
+                </div>
+              )}
+              <div>
+                <p className="mb-2 text-xs text-gray-500">
+                  Masukkan atau scan kode label (contoh: A.XXXXXXXXXX / M.XXXXXXXXXX / BF.XXXXXXXXXX)
+                </p>
+                <input
+                  autoFocus={!cameraOn}
+                  value={scanCode}
+                  onChange={(e) => setScanCode(e.target.value)}
+                  placeholder="X.XXXXXXXXXX"
+                  className="h-11 w-full rounded-xl border border-gray-200 px-4 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
               {scanError && (
-                <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
                   {scanError}
                 </p>
               )}
-              <div className="mt-4 flex justify-end gap-2">
+              <div className="flex flex-wrap justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => setScanOpen(false)}
+                  onClick={() => {
+                    setCameraOn((v) => !v);
+                    setScanError(null);
+                  }}
+                  className="mr-auto inline-flex h-10 items-center gap-1.5 rounded-full border px-4 text-sm font-semibold hover:bg-blue-50"
+                  style={{ borderColor: PRIMARY, color: PRIMARY }}
+                >
+                  <QrCodeIcon className="h-4 w-4" />
+                  {cameraOn ? "Tutup Kamera" : "Scan Kamera"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setScanOpen(false);
+                    setCameraOn(false);
+                    setScanError(null);
+                    setScanCode("");
+                  }}
                   className="inline-flex h-10 items-center rounded-full border border-gray-300 px-5 text-sm text-gray-700 hover:bg-gray-50"
                 >
                   Batal
@@ -1622,10 +1802,7 @@ export function CrusherDetailWorkspace({
 {/* ── Dialog detail label input ─────────────────────────────── */}
       {selectedLabelRef &&
         (() => {
-          const groups: InputLabelGroup[] =
-            selectedLabelRef.tab === "bonggolan"
-              ? bonggolanGroups
-              : bbGroups;
+          const groups: InputLabelGroup[] = groupsByTab[selectedLabelRef.tab];
           const liveGroup = groups.find(
             (g) => g.key === selectedLabelRef.key,
           );

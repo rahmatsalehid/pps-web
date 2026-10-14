@@ -670,7 +670,7 @@ function BlokRow({
       onClick={onSelect}
       className="flex w-full items-center gap-1.5 border-l-[3px] px-2.5 py-3 text-left transition"
       style={{
-        borderColor: selected ? baseColor : "transparent",
+        borderLeftColor: selected ? baseColor : "transparent",
         backgroundColor,
         borderBottom: `1px solid ${BORDER}`,
       }}
@@ -747,7 +747,7 @@ function LokasiRow({
         ? WARNING_BG
         : undefined;
 
-  const borderColor = selected
+  const borderLeftColor = selected
     ? baseColor
     : complete
       ? GREEN
@@ -757,7 +757,7 @@ function LokasiRow({
     <div
       className="flex items-stretch border-l-[3px]"
       style={{
-        borderColor,
+        borderLeftColor,
         backgroundColor,
         borderBottom: `1px solid ${BORDER}`,
       }}

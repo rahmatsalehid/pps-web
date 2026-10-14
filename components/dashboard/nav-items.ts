@@ -57,10 +57,10 @@ const LABEL_CHILDREN: NavItem[] = [
   { label: "Bonggolan", href: "/label/bonggolan", icon: PackageIcon, perm: "label_bonggolan:read" },
   { label: "Broker", href: "/label/broker", icon: UsersIcon, perm: "label_broker:read" },
   { label: "Crusher", href: "/label/crusher", icon: HammerIcon, perm: "label_crusher:read" },
-  { label: "Furniture WIP", href: "#", icon: FurnitureIcon },
+  { label: "Furniture WIP", href: "/label/furniture-wip", icon: FurnitureIcon, perm: "label_furniturewip:read" },
   { label: "Gilingan", href: "#", icon: DiscIcon },
-  { label: "Mixer", href: "#", icon: GearIcon },
-  { label: "Packing", href: "#", icon: BoxIcon },
+  { label: "Mixer", href: "/label/mixer", icon: GearIcon, perm: "label_mixer:read" },
+  { label: "Packing", href: "/label/packing", icon: BoxIcon, perm: "label_barangjadi:read" },
   { label: "Reject", href: "#", icon: TrashIcon },
   { label: "Washing", href: "#", icon: DropletIcon },
 ];

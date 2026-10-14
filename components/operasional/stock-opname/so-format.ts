@@ -53,7 +53,9 @@ export function soMonthName(month: number): string {
 }
 
 export function soWeightUnit(categoryCode: string): "kg" | "pcs" {
-  return categoryCode === "furniturewip" ? "pcs" : "kg";
+  return categoryCode === "furniturewip" || categoryCode === "barangdagang"
+    ? "pcs"
+    : "kg";
 }
 
 export function soQtyText(

@@ -99,9 +99,21 @@ export type CrusherBonggolanItem = {
   dateUsage: string | null;
 };
 
+export type CrusherRejectItem = {
+  noReject: string | null;
+  noRejectPartial: string | null;
+  berat: number | null;
+  beratAct: number | null;
+  isPartial: boolean | null;
+  idJenis: number | null;
+  namaJenis: string | null;
+  dateUsage: string | null;
+};
+
 export type CrusherInputs = {
   bb: CrusherBbItem[];
   bonggolan: CrusherBonggolanItem[];
+  reject: CrusherRejectItem[];
   summary: Record<string, number>;
 };
 
@@ -331,6 +343,22 @@ function parseBonggolanItem(j: Record<string, unknown>): CrusherBonggolanItem {
   };
 }
 
+function parseRejectItem(j: Record<string, unknown>): CrusherRejectItem {
+  return {
+    noReject: asString(j["NoReject"] ?? j["noReject"]) || null,
+    noRejectPartial:
+      asString(
+        j["NoRejectPartial"] ?? j["noRejectPartial"] ?? j["NoPartial"] ?? j["noPartial"],
+      ) || null,
+    berat: asDoubleOrNull(j["Berat"] ?? j["berat"]),
+    beratAct: asDoubleOrNull(j["BeratAct"] ?? j["beratAct"]),
+    isPartial: asBoolOrNull(j["IsPartial"] ?? j["isPartial"]),
+    idJenis: asIntOrNull(j["IdReject"] ?? j["idReject"] ?? j["IdJenis"] ?? j["idJenis"]),
+    namaJenis: asString(j["NamaReject"] ?? j["namaReject"] ?? j["NamaJenis"] ?? j["namaJenis"]) || null,
+    dateUsage: asDateOrNull(j["DateUsage"] ?? j["dateUsage"]),
+  };
+}
+
 export function parseCrusherInputs(j: Record<string, unknown>): CrusherInputs {
   const listOf = <T>(v: unknown, f: (m: Record<string, unknown>) => T): T[] => {
     if (!Array.isArray(v)) return [];
@@ -342,6 +370,7 @@ export function parseCrusherInputs(j: Record<string, unknown>): CrusherInputs {
   return {
     bb: listOf(j["bb"], parseBbItem),
     bonggolan: listOf(j["bonggolan"], parseBonggolanItem),
+    reject: listOf(j["reject"] ?? j["Reject"], parseRejectItem),
     summary,
   };
 }
@@ -697,12 +726,17 @@ export async function fetchCrusherFormula(
 export type SubmitInputsPayload = {
   bb?: { noBahanBaku: string | null; noPallet: number | null; noSak: number | null }[];
   bonggolan?: { noBonggolan: string | null }[];
+  reject?: { noReject: string | null }[];
   bbPartial?: {
     noBahanBaku: string | null;
     noPallet: number | null;
     noSak: number | null;
     berat: number | null;
   }[];
+  rejectPartial?: (
+    | { noReject: string | null; berat: number | null }
+    | { noRejectPartial: string }
+  )[];
 };
 
 export async function submitCrusherInputs(

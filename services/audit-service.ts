@@ -132,6 +132,33 @@ const MODULE_CONFIGS: Record<string, AuditModuleConfig> = {
       { idField: "IdLokasi", nameField: null, displayLabel: "Lokasi", relational: false },
     ],
   },
+  crusher: {
+    module: "crusher",
+    pkField: "NoCrusher",
+    displayName: "Crusher",
+    fields: [
+      { idField: "IdCrusher", nameField: "NamaCrusher", displayLabel: "Jenis Crusher", relational: true },
+      { idField: "IdWarehouse", nameField: "NamaWarehouse", displayLabel: "Warehouse", relational: true },
+      { idField: "Berat", nameField: null, displayLabel: "Berat (kg)", relational: false },
+      { idField: "DateCreate", nameField: null, displayLabel: "Tanggal Buat", relational: false },
+      { idField: "Blok", nameField: null, displayLabel: "Blok", relational: false },
+      { idField: "IdLokasi", nameField: null, displayLabel: "Lokasi", relational: false },
+    ],
+  },
+  furniturewip: {
+    module: "furniturewip",
+    pkField: "NoFurnitureWIP",
+    displayName: "Furniture WIP",
+    fields: [
+      { idField: "IdFurnitureWIP", nameField: "NamaFurnitureWIP", displayLabel: "Jenis Furniture WIP", relational: true },
+      { idField: "IdWarehouse", nameField: "NamaWarehouse", displayLabel: "Warehouse", relational: true },
+      { idField: "Pcs", nameField: null, displayLabel: "PCS", relational: false },
+      { idField: "Berat", nameField: null, displayLabel: "Berat (kg)", relational: false },
+      { idField: "DateCreate", nameField: null, displayLabel: "Tanggal Buat", relational: false },
+      { idField: "Blok", nameField: null, displayLabel: "Blok", relational: false },
+      { idField: "IdLokasi", nameField: null, displayLabel: "Lokasi", relational: false },
+    ],
+  },
 };
 
 function requireToken(token: string | undefined): string {
