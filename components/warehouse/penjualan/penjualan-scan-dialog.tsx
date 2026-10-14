@@ -41,9 +41,9 @@ type Pending =
   | null;
 
 /**
- * Scan label (BA. Barang Jadi / BB. Furniture WIP) untuk memenuhi turnover.
- * Bila pcs label melebihi sisa kebutuhan, tawarkan pecah (partial) lalu
- * cetak ulang label induk (pcs pada label fisik berkurang).
+ * Scan label (BA. Barang Jadi / BB. Furniture WIP / BD. Barang Dagang) untuk
+ * memenuhi turnover. Bila pcs label melebihi sisa kebutuhan, tawarkan pecah
+ * (partial) lalu cetak ulang label induk (pcs pada label fisik berkurang).
  */
 export function PenjualanScanDialog({
   noBJJual,
@@ -237,13 +237,14 @@ export function PenjualanScanDialog({
           <form onSubmit={submit} className="space-y-3 p-5">
             <label className="block">
               <span className="mb-1 block text-xs font-medium text-gray-600">
-                Kode label (BA. Barang Jadi / BB. Furniture WIP)
+                Kode label (BA. Barang Jadi / BB. Furniture WIP / BD. Barang
+                Dagang)
               </span>
               <input
                 ref={inputRef}
                 value={code}
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
-                placeholder="BA.0000000001 / BB.0000000001"
+                placeholder="BA.0000000001 / BB.0000000001 / BD.0000000001"
                 autoComplete="off"
                 className="h-11 w-full rounded-xl border bg-gray-50 px-3 font-mono text-sm outline-none focus:ring-2 focus:ring-blue-100"
                 style={{ borderColor: BORDER }}

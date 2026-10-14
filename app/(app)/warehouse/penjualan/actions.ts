@@ -15,6 +15,10 @@ import {
   markLabelPrinted,
   releaseLabelPrintLock,
 } from "@/services/inject-service";
+import {
+  fetchPbdLabelPdfBase64,
+  markPbdLabelPrinted,
+} from "@/services/penerimaan-barang-dagang-service";
 
 async function getToken(): Promise<string | undefined> {
   const cookieStore = await cookies();
@@ -70,19 +74,34 @@ export async function scanPenjualanAction(
 /**
  * Cetak ulang label induk yang dipecah (pcs pada label fisik berkurang):
  * kunci cetak → ambil PDF → tandai tercetak → lepas kunci.
+ * Kategori barang dagang (BD.) memakai endpoint label barang-dagang.
  */
 export async function printPenjualanParentLabelAction(
   kodeKategori: string,
   noLabel: string,
 ) {
-  const category = kodeKategori === "furniturewip" ? "fwip" : "bj";
   let locked = false;
   try {
     const token = await getToken();
     await acquireLabelPrintLock(token, noLabel);
     locked = true;
-    const pdfBase64 = await fetchOutputLabelPdfBase64(token, category, noLabel);
-    await markLabelPrinted(token, category, noLabel);
+    const pdfBase64 =
+      kodeKategori === "barangdagang"
+        ? await fetchPbdLabelPdfBase64(token, noLabel)
+        : await fetchOutputLabelPdfBase64(
+            token,
+            kodeKategori === "furniturewip" ? "fwip" : "bj",
+            noLabel,
+          );
+    if (kodeKategori === "barangdagang") {
+      await markPbdLabelPrinted(token, noLabel);
+    } else {
+      await markLabelPrinted(
+        token,
+        kodeKategori === "furniturewip" ? "fwip" : "bj",
+        noLabel,
+      );
+    }
     await releaseLabelPrintLock(token, noLabel);
     locked = false;
     return { ok: true as const, pdfBase64 };

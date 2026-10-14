@@ -27,7 +27,10 @@ export type PenjualanLabelScan = {
   dateTimeScan: string | null;
 };
 
-export type PenjualanKategori = "furniturewip" | "barangjadi";
+export type PenjualanKategori =
+  | "furniturewip"
+  | "barangjadi"
+  | "barangdagang";
 
 export type PenjualanLine = {
   kodeKategori: string;
@@ -156,7 +159,9 @@ function parseLine(j: Record<string, unknown>): PenjualanLine {
 }
 
 export function kategoriLabel(kode: string): string {
-  return kode === "furniturewip" ? "Furniture WIP" : "Barang Jadi";
+  if (kode === "furniturewip") return "Furniture WIP";
+  if (kode === "barangdagang") return "Barang Dagang";
+  return "Barang Jadi";
 }
 
 // ── API calls ────────────────────────────────────────────────────────────────
