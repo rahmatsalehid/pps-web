@@ -146,7 +146,10 @@ export const LAPORAN_KATEGORI: LaporanKategori[] = [
   {
     nama: "Barang Dagang",
     ikon: "🛒",
-    items: [{ title: "Laporan Stok Barang Dagang", kode: "stok-barang-dagang" }],
+    items: [
+      { title: "Laporan Stok Barang Dagang", kode: "stok-barang-dagang" },
+      { title: "Stock Barang Dagang V2", kode: "stok-barang-dagang-v2" },
+    ],
   },
   {
     nama: "Rekap Produksi",
@@ -422,6 +425,22 @@ export const LAPORAN_REGISTRY: Record<string, LaporanSpec> = {
   "stok-barang-dagang": {
     kode: "stok-barang-dagang",
     title: "Laporan Stok Barang Dagang",
+    endpoint: "",
+    kind: "pdf",
+    fields: [
+      { key: "tglAkhir", label: "Tanggal Akhir", type: "date", default: "today" },
+      {
+        key: "warehouse",
+        label: "Warehouse",
+        type: "select",
+        default: "ALL",
+        optionsSource: "warehouse",
+      },
+    ],
+  },
+  "stok-barang-dagang-v2": {
+    kode: "stok-barang-dagang-v2",
+    title: "Stock Barang Dagang V2",
     endpoint: "",
     kind: "pdf",
     fields: [

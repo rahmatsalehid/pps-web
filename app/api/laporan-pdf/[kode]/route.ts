@@ -17,6 +17,8 @@ const PDF_SOURCES: Record<string, (search: string) => string> = {
     `${BACKEND_API_URL}/api/laporan/barang-jadi/stok-v2/pdf${search}`,
   "stok-barang-dagang": (search) =>
     `${BACKEND_API_URL}/api/laporan/barang-dagang/stok/pdf${search}`,
+  "stok-barang-dagang-v2": (search) =>
+    `${BACKEND_API_URL}/api/laporan/barang-dagang/stok-v2/pdf${search}`,
 };
 
 /** Cek laporan:read di backend (GET /api/auth/me) sebelum meneruskan PDF. */
