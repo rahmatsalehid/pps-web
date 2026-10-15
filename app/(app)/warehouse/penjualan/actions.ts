@@ -4,10 +4,17 @@ import { cookies } from "next/headers";
 import { AUTH_TOKEN_COOKIE } from "@/services/auth-service";
 import { ApiRequestError } from "@/services/api";
 import {
+  addPenjualanItem,
+  createPenjualan,
+  deletePenjualanItem,
   fetchPenjualanDetail,
   fetchPenjualanList,
+  fetchPenjualanMasters,
   scanPenjualanLabel,
+  updatePenjualanItem,
   type FetchPenjualanListParams,
+  type PenjualanCreateInput,
+  type PenjualanCreateItem,
 } from "@/services/penjualan-service";
 import {
   acquireLabelPrintLock,
@@ -49,6 +56,67 @@ export async function getPenjualanDetailAction(noBJJual: string) {
       ok: true as const,
       detail: await fetchPenjualanDetail(token, noBJJual),
     };
+  } catch (e) {
+    return { ok: false as const, error: errMsg(e) };
+  }
+}
+
+/** Master pembeli + jenis per kategori (barangjadi/furniturewip/barangdagang). */
+export async function getPenjualanMastersAction() {
+  try {
+    const token = await getToken();
+    return { ok: true as const, masters: await fetchPenjualanMasters(token) };
+  } catch (e) {
+    return { ok: false as const, error: errMsg(e) };
+  }
+}
+
+/** Buat DO baru: BJJual_h + BJJualItem_d sekaligus. */
+export async function createPenjualanAction(input: PenjualanCreateInput) {
+  try {
+    const token = await getToken();
+    const noBJJual = await createPenjualan(token, input);
+    return { ok: true as const, noBJJual };
+  } catch (e) {
+    return { ok: false as const, error: errMsg(e) };
+  }
+}
+
+export async function addPenjualanItemAction(
+  noBJJual: string,
+  item: PenjualanCreateItem,
+) {
+  try {
+    const token = await getToken();
+    await addPenjualanItem(token, noBJJual, item);
+    return { ok: true as const };
+  } catch (e) {
+    return { ok: false as const, error: errMsg(e) };
+  }
+}
+
+export async function updatePenjualanItemAction(
+  noBJJual: string,
+  item: PenjualanCreateItem,
+) {
+  try {
+    const token = await getToken();
+    await updatePenjualanItem(token, noBJJual, item);
+    return { ok: true as const };
+  } catch (e) {
+    return { ok: false as const, error: errMsg(e) };
+  }
+}
+
+export async function deletePenjualanItemAction(
+  noBJJual: string,
+  kodeKategori: string,
+  idJenis: number,
+) {
+  try {
+    const token = await getToken();
+    await deletePenjualanItem(token, noBJJual, kodeKategori, idJenis);
+    return { ok: true as const };
   } catch (e) {
     return { ok: false as const, error: errMsg(e) };
   }

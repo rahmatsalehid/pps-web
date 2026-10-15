@@ -14,10 +14,17 @@ import {
   RotateCcwIcon,
 } from "@/components/dashboard/icons";
 import { PenjualanScanDialog } from "./penjualan-scan-dialog";
+import {
+  PenjualanAddItemDialog,
+  PenjualanDeleteItemDialog,
+  PenjualanEditPcsDialog,
+} from "./penjualan-item-dialogs";
 
 const PRIMARY = "#1E6FD9";
 const SUCCESS = "#0A7349";
 const BORDER = "#E2E6EA";
+
+type ItemAction = "add" | { kind: "edit" | "delete"; line: PenjualanLine };
 
 function fmtDate(iso: string | null): string {
   if (!iso) return "-";
@@ -30,7 +37,17 @@ function fmtDate(iso: string | null): string {
   });
 }
 
-function LineCard({ line, index }: { line: PenjualanLine; index: number }) {
+function LineCard({
+  line,
+  index,
+  onEdit,
+  onDelete,
+}: {
+  line: PenjualanLine;
+  index: number;
+  onEdit?: () => void;
+  onDelete?: () => void;
+}) {
   const target = line.pcsRequired;
   const scanned = line.pcsScanned;
   const pct = target > 0 ? Math.min(100, Math.round((scanned / target) * 100)) : 0;
@@ -62,6 +79,33 @@ function LineCard({ line, index }: { line: PenjualanLine; index: number }) {
         >
           {scanned}/{target} pcs
         </p>
+        {onEdit && (
+          <button
+            type="button"
+            onClick={onEdit}
+            className="rounded p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
+            title="Ubah pcs"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden>
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+            </svg>
+          </button>
+        )}
+        {onDelete && (
+          <button
+            type="button"
+            onClick={onDelete}
+            className="rounded p-1.5 text-gray-400 transition hover:bg-red-50 hover:text-red-600"
+            title="Hapus item"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden>
+              <path d="M3 6h18" />
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+              <path d="M10 11v6M14 11v6" />
+            </svg>
+          </button>
+        )}
       </div>
 
       <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-gray-100">
@@ -101,11 +145,14 @@ function LineCard({ line, index }: { line: PenjualanLine; index: number }) {
 export function PenjualanDetailPanel({
   noBJJual,
   canScan,
+  canCreate = false,
   onCompleted,
   onChanged,
 }: {
   noBJJual: string;
   canScan: boolean;
+  /** Boleh tambah/ubah/hapus item (penjualan:create). */
+  canCreate?: boolean;
   /** Semua turnover terpenuhi setelah scan → daftar perlu dimuat ulang. */
   onCompleted: () => void;
   /** Ada scan berhasil (progres berubah). */
@@ -115,6 +162,7 @@ export function PenjualanDetailPanel({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [scanOpen, setScanOpen] = useState(false);
+  const [itemAction, setItemAction] = useState<ItemAction | null>(null);
 
   const load = useCallback(async () => {
     const res = await getPenjualanDetailAction(noBJJual);
@@ -183,6 +231,14 @@ export function PenjualanDetailPanel({
   const { header, lines } = detail;
   const allFulfilled = lines.length > 0 && lines.every((l) => l.isComplete);
   const showScan = canScan && !allFulfilled && !header.isComplete;
+  // Edit item hanya selama DO belum complete (guard tambahan per baris:
+  // belum ada scan) — dicek lagi oleh backend.
+  const canEditItems = canCreate && !header.isComplete;
+
+  async function handleItemSaved() {
+    await load();
+    onChanged();
+  }
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -248,7 +304,22 @@ export function PenjualanDetailPanel({
           </dl>
         </div>
 
-        <p className="pt-1 text-sm font-bold text-gray-800">Item yang Dipickup</p>
+        <div className="flex items-center gap-2 pt-1">
+          <p className="flex-1 text-sm font-bold text-gray-800">Item yang Dipickup</p>
+          {canEditItems && (
+            <button
+              type="button"
+              onClick={() => setItemAction("add")}
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-white"
+              style={{ backgroundColor: "#00897B" }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-3.5 w-3.5" aria-hidden>
+                <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+              </svg>
+              Tambah Item
+            </button>
+          )}
+        </div>
         {lines.length === 0 ? (
           <p className="rounded-xl border border-dashed py-8 text-center text-sm text-gray-400" style={{ borderColor: BORDER }}>
             Belum ada item
@@ -256,7 +327,21 @@ export function PenjualanDetailPanel({
         ) : (
           <div className="space-y-2.5">
             {lines.map((l, i) => (
-              <LineCard key={`${l.kodeKategori}-${l.idJenis}`} line={l} index={i + 1} />
+              <LineCard
+                key={`${l.kodeKategori}-${l.idJenis}`}
+                line={l}
+                index={i + 1}
+                onEdit={
+                  canEditItems && l.pcsScanned === 0
+                    ? () => setItemAction({ kind: "edit", line: l })
+                    : undefined
+                }
+                onDelete={
+                  canEditItems && l.pcsScanned === 0
+                    ? () => setItemAction({ kind: "delete", line: l })
+                    : undefined
+                }
+              />
             ))}
           </div>
         )}
@@ -294,6 +379,31 @@ export function PenjualanDetailPanel({
           noBJJual={noBJJual}
           onScanned={() => void handleScanned()}
           onClose={() => setScanOpen(false)}
+        />
+      )}
+
+      {itemAction === "add" && (
+        <PenjualanAddItemDialog
+          noBJJual={noBJJual}
+          existing={lines}
+          onSaved={() => void handleItemSaved()}
+          onClose={() => setItemAction(null)}
+        />
+      )}
+      {itemAction && itemAction !== "add" && itemAction.kind === "edit" && (
+        <PenjualanEditPcsDialog
+          noBJJual={noBJJual}
+          line={itemAction.line}
+          onSaved={() => void handleItemSaved()}
+          onClose={() => setItemAction(null)}
+        />
+      )}
+      {itemAction && itemAction !== "add" && itemAction.kind === "delete" && (
+        <PenjualanDeleteItemDialog
+          noBJJual={noBJJual}
+          line={itemAction.line}
+          onSaved={() => void handleItemSaved()}
+          onClose={() => setItemAction(null)}
         />
       )}
     </div>

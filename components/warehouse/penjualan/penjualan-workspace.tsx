@@ -6,8 +6,9 @@ import type {
   PenjualanHeader,
   PenjualanStatusFilter,
 } from "@/services/penjualan-service";
-import { Loader2Icon, RotateCcwIcon, X } from "@/components/dashboard/icons";
+import { Loader2Icon, PlusIcon, RotateCcwIcon, X } from "@/components/dashboard/icons";
 import { PenjualanDetailPanel } from "./penjualan-detail";
+import { PenjualanCreateDialog } from "./penjualan-create-dialog";
 
 const PRIMARY = "#1E6FD9";
 const SUCCESS = "#0A7349";
@@ -140,7 +141,13 @@ function FilterDialog({
  * Halaman Penjualan (sama dengan tablet): daftar Penjualan di kiri, detail
  * turnover + scan label di kanan.
  */
-export function PenjualanWorkspace({ canScan }: { canScan: boolean }) {
+export function PenjualanWorkspace({
+  canScan,
+  canCreate = false,
+}: {
+  canScan: boolean;
+  canCreate?: boolean;
+}) {
   const [items, setItems] = useState<PenjualanHeader[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -155,6 +162,7 @@ export function PenjualanWorkspace({ canScan }: { canScan: boolean }) {
   const [filterOpen, setFilterOpen] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const hasActiveFilter =
     filters.status !== "incomplete" || (!!filters.dateFrom && !!filters.dateTo);
@@ -240,7 +248,7 @@ export function PenjualanWorkspace({ canScan }: { canScan: boolean }) {
     <div className="flex h-full min-h-0 w-full flex-col overflow-hidden lg:flex-row">
       {/* Daftar */}
       <div
-        className="flex max-h-[45vh] min-h-0 w-full shrink-0 flex-col border-b bg-white lg:max-h-none lg:w-[400px] lg:border-b-0 lg:border-r"
+        className="relative flex max-h-[45vh] min-h-0 w-full shrink-0 flex-col border-b bg-white lg:max-h-none lg:w-[400px] lg:border-b-0 lg:border-r"
         style={{ borderColor: BORDER }}
       >
         <div className="flex items-center gap-2 p-3">
@@ -386,6 +394,19 @@ export function PenjualanWorkspace({ canScan }: { canScan: boolean }) {
             </>
           )}
         </div>
+
+        {canCreate && (
+          <button
+            type="button"
+            onClick={() => setCreateOpen(true)}
+            className="absolute bottom-5 right-5 grid h-12 w-12 place-items-center rounded-full text-white shadow-lg transition hover:brightness-110"
+            style={{ backgroundColor: PRIMARY }}
+            title="Buat Penjualan Baru"
+            aria-label="Buat Penjualan Baru"
+          >
+            <PlusIcon className="h-5 w-5" />
+          </button>
+        )}
       </div>
 
       {/* Detail */}
@@ -395,6 +416,7 @@ export function PenjualanWorkspace({ canScan }: { canScan: boolean }) {
             key={selected}
             noBJJual={selected}
             canScan={canScan}
+            canCreate={canCreate}
             onChanged={refresh}
             onCompleted={refresh}
           />
@@ -412,6 +434,20 @@ export function PenjualanWorkspace({ canScan }: { canScan: boolean }) {
           onApply={(f) => {
             setFilters(f);
             setFilterOpen(false);
+          }}
+        />
+      )}
+
+      {createOpen && (
+        <PenjualanCreateDialog
+          onClose={() => setCreateOpen(false)}
+          onCreated={(noBJJual) => {
+            // Refresh daftar di belakang layar sukses; dialog ditutup user.
+            setSelected(noBJJual);
+            setFilters(DEFAULT_FILTERS);
+            setSearchInput("");
+            setSearch("");
+            refresh();
           }}
         />
       )}

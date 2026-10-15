@@ -72,6 +72,32 @@ export type PenjualanPartialSuggestion = {
   message: string;
 };
 
+// ── Create / item types ──────────────────────────────────────────────────────
+
+export type PenjualanCreateItem = {
+  kodeKategori: PenjualanKategori;
+  idJenis: number;
+  pcs: number;
+};
+
+export type PenjualanCreateInput = {
+  tanggal: string;
+  idPembeli: number;
+  invoiceType: string;
+  remark?: string;
+  items: PenjualanCreateItem[];
+};
+
+export type PenjualanItemOption = { id: number; nama: string };
+export type PenjualanPembeliOption = { idPembeli: number; namaPembeli: string };
+
+export type PenjualanMasters = {
+  pembeli: PenjualanPembeliOption[];
+  barangJadi: PenjualanItemOption[];
+  furnitureWip: PenjualanItemOption[];
+  barangDagang: PenjualanItemOption[];
+};
+
 export type PenjualanScanOutcome =
   | { kind: "success" }
   | { kind: "needsConfirmation"; suggestion: PenjualanPartialSuggestion }
@@ -276,4 +302,175 @@ export async function scanPenjualanLabel(
     };
   }
   return { kind: "success" };
+}
+
+// ── Masters (pembeli + jenis per kategori) ───────────────────────────────────
+
+function rowsOf(d: unknown): Record<string, unknown>[] {
+  const container = d as { data?: unknown } | null;
+  const arr = Array.isArray(d) ? d : Array.isArray(container?.data) ? container?.data : [];
+  return arr as Record<string, unknown>[];
+}
+
+/** Pesan error dari backend — prioritaskan `error.message` (detail asli). */
+function serverMsg(
+  data: { message?: string; error?: { message?: string } },
+  fallback: string,
+): string {
+  const detail = data.error?.message;
+  if (detail && (!data.message || data.message === "Internal Server Error")) {
+    return detail;
+  }
+  return data.message ?? fallback;
+}
+
+/** GET /mst/pembeli + /mst-barang-jadi + /furniture-wip-type + /mst-barang-dagang. */
+export async function fetchPenjualanMasters(
+  token: string | undefined,
+): Promise<PenjualanMasters> {
+  const t = requireToken(token);
+  const [pembeliRes, bjRes, wipRes, bdRes] = await Promise.all([
+    apiFetchAuth<{ data?: unknown; message?: string }>("/mst/pembeli", t),
+    apiFetchAuth<{ data?: unknown; message?: string }>("/mst-barang-jadi", t),
+    apiFetchAuth<{ data?: unknown; message?: string }>("/furniture-wip-type", t),
+    apiFetchAuth<{ data?: unknown; message?: string }>("/mst-barang-dagang", t),
+  ]);
+
+  return {
+    pembeli: rowsOf(pembeliRes.data)
+      .map((p) => ({
+        idPembeli: asInt(pick(p, "IdPembeli", "idPembeli")),
+        namaPembeli: asString(pick(p, "NamaPembeli", "namaPembeli")),
+      }))
+      .filter((p) => p.idPembeli > 0),
+    barangJadi: rowsOf(bjRes.data)
+      .map((p) => ({
+        id: asInt(pick(p, "IdBJ", "idBJ", "IdJenis", "idJenis")),
+        nama: asString(pick(p, "NamaBJ", "namaBJ", "NamaJenis", "namaJenis")),
+      }))
+      .filter((p) => p.id > 0),
+    furnitureWip: rowsOf(wipRes.data)
+      .map((p) => ({
+        id: asInt(pick(p, "IdCabinetWIP", "idCabinetWip")),
+        nama: asString(pick(p, "Nama", "nama")),
+      }))
+      .filter((p) => p.id > 0),
+    barangDagang: rowsOf(bdRes.data)
+      .map((p) => ({
+        id: asInt(pick(p, "IdBarangDagang", "idBarangDagang")),
+        nama: asString(pick(p, "NamaBarangDagang", "namaBarangDagang")),
+      }))
+      .filter((p) => p.id > 0),
+  };
+}
+
+// ── Create DO (header + items) ───────────────────────────────────────────────
+
+/**
+ * POST /bj-jual — buat BJJual_h + BJJualItem_d sekaligus.
+ * Butuh permission penjualan:create. Mengembalikan NoBJJual (auto K.00000xxxxx).
+ */
+export async function createPenjualan(
+  token: string | undefined,
+  input: PenjualanCreateInput,
+): Promise<string> {
+  const t = requireToken(token);
+  const res = await apiFetchAuth<{
+    success?: boolean;
+    message?: string;
+    data?: Record<string, unknown>;
+  }>("/bj-jual", t, {
+    method: "POST",
+    body: JSON.stringify({
+      tanggal: input.tanggal,
+      idPembeli: input.idPembeli,
+      invoiceType: input.invoiceType,
+      ...(input.remark?.trim() ? { remark: input.remark.trim() } : {}),
+      items: input.items.map((i) => ({
+        kodeKategori: i.kodeKategori,
+        idJenis: i.idJenis,
+        pcs: i.pcs,
+      })),
+    }),
+  });
+  if (res.status === 403) {
+    throw new ApiRequestError("Anda tidak punya akses membuat Penjualan (penjualan:create).");
+  }
+  if (res.status < 200 || res.status >= 300) {
+    throw new ApiRequestError(serverMsg(res.data, `Gagal membuat penjualan (${res.status})`));
+  }
+  const noBJJual = asString(res.data.data?.["NoBJJual"] ?? res.data.data?.["noBJJual"]);
+  if (!noBJJual) throw new ApiRequestError("Nomor DO tidak diterima dari server");
+  return noBJJual;
+}
+
+// ── Item CRUD (POST/PATCH/DELETE /penjualan/:no/items) ───────────────────────
+
+/** POST /penjualan/:noBJJual/items — tambah 1 baris item. */
+export async function addPenjualanItem(
+  token: string | undefined,
+  noBJJual: string,
+  item: PenjualanCreateItem,
+): Promise<void> {
+  const t = requireToken(token);
+  const res = await apiFetchAuth<{ message?: string }>(
+    `/penjualan/${encodeURIComponent(noBJJual)}/items`,
+    t,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        kodeKategori: item.kodeKategori,
+        idJenis: item.idJenis,
+        pcs: item.pcs,
+      }),
+    },
+  );
+  if (res.status < 200 || res.status >= 300) {
+    throw new ApiRequestError(serverMsg(res.data, `Gagal menambah item (${res.status})`));
+  }
+}
+
+/** PATCH /penjualan/:noBJJual/items — ubah pcs 1 baris (belum discan). */
+export async function updatePenjualanItem(
+  token: string | undefined,
+  noBJJual: string,
+  item: PenjualanCreateItem,
+): Promise<void> {
+  const t = requireToken(token);
+  const res = await apiFetchAuth<{ message?: string }>(
+    `/penjualan/${encodeURIComponent(noBJJual)}/items`,
+    t,
+    {
+      method: "PATCH",
+      body: JSON.stringify({
+        kodeKategori: item.kodeKategori,
+        idJenis: item.idJenis,
+        pcs: item.pcs,
+      }),
+    },
+  );
+  if (res.status < 200 || res.status >= 300) {
+    throw new ApiRequestError(serverMsg(res.data, `Gagal memperbarui item (${res.status})`));
+  }
+}
+
+/** DELETE /penjualan/:noBJJual/items?kodeKategori=&idJenis= — hapus baris (belum discan). */
+export async function deletePenjualanItem(
+  token: string | undefined,
+  noBJJual: string,
+  kodeKategori: string,
+  idJenis: number,
+): Promise<void> {
+  const t = requireToken(token);
+  const qp = new URLSearchParams();
+  qp.set("kodeKategori", kodeKategori);
+  qp.set("idJenis", String(idJenis));
+  const res = await apiFetchAuth<{ message?: string }>(
+    `/penjualan/${encodeURIComponent(noBJJual)}/items?${qp.toString()}`,
+    t,
+    { method: "DELETE" },
+  );
+  if (res.status < 200 || res.status >= 300) {
+    throw new ApiRequestError(serverMsg(res.data, `Gagal menghapus item (${res.status})`));
+  }
 }

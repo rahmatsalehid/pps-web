@@ -15,14 +15,14 @@ export default async function PenjualanPage() {
   const cookieStore = await cookies();
   const token = cookieStore.get(AUTH_TOKEN_COOKIE)?.value;
 
-  // Scan label butuh penjualan:create (sama dengan tablet).
-  let canScan = false;
+  // Scan/buat DO & edit item butuh penjualan:create (sama dengan tablet).
+  let canCreate = false;
   try {
     const me = await fetchMyPermissions(token);
-    canScan = hasPermission(me.data.permissions, "penjualan:create");
+    canCreate = hasPermission(me.data.permissions, "penjualan:create");
   } catch {
-    canScan = false;
+    canCreate = false;
   }
 
-  return <PenjualanWorkspace canScan={canScan} />;
+  return <PenjualanWorkspace canScan={canCreate} canCreate={canCreate} />;
 }

@@ -52,17 +52,19 @@ export type NavSection = {
 // (E:\JOB\API\pps-backend\src\modules\label\*).
 const LABEL_CHILDREN: NavItem[] = [
   { label: "Bahan Baku", href: "/label/bahan-baku", icon: GrainIcon, perm: "label_bahanbaku:read" },
-  { label: "Bahan Pendukung", href: "#", icon: LayersIcon },
-  { label: "Barang Dagang", href: "#", icon: ShoppingCartIcon },
+  { label: "Washing", href: "/label/washing", icon: DropletIcon, perm: "label_washing:read" },
+  
   { label: "Bonggolan", href: "/label/bonggolan", icon: PackageIcon, perm: "label_bonggolan:read" },
   { label: "Broker", href: "/label/broker", icon: UsersIcon, perm: "label_broker:read" },
   { label: "Crusher", href: "/label/crusher", icon: HammerIcon, perm: "label_crusher:read" },
   { label: "Furniture WIP", href: "/label/furniture-wip", icon: FurnitureIcon, perm: "label_furniturewip:read" },
-  { label: "Gilingan", href: "#", icon: DiscIcon },
+  { label: "Gilingan", href: "/label/gilingan", icon: DiscIcon, perm: "label_gilingan:read" },
   { label: "Mixer", href: "/label/mixer", icon: GearIcon, perm: "label_mixer:read" },
   { label: "Packing", href: "/label/packing", icon: BoxIcon, perm: "label_barangjadi:read" },
-  { label: "Reject", href: "#", icon: TrashIcon },
-  { label: "Washing", href: "#", icon: DropletIcon },
+  { label: "Reject", href: "/label/reject", icon: TrashIcon, perm: "label_reject:read" },
+  { label: "Bahan Pendukung", href: "#", icon: LayersIcon },
+  { label: "Barang Dagang", href: "#", icon: ShoppingCartIcon },
+  
 ];
 
 const WASHING_BROK: NavItem[] = [
