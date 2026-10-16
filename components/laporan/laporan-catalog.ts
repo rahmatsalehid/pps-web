@@ -26,6 +26,7 @@ export type LaporanSpec = {
   endpoint: string;
   fields: LaporanField[];
   kind?: "grid" | "pdf";
+  exportKind?: "csv" | "excel";
 };
 
 export type LaporanItem = {
@@ -299,7 +300,10 @@ export const LAPORAN_REGISTRY: Record<string, LaporanSpec> = {
   "stok-gilingan": stokSpec("stok-gilingan", "Stok Gilingan", "gilingan"),
   "stok-mixer": stokSpec("stok-mixer", "Stok Mixer (Per Jenis)", "mixer"),
   "stok-furniture-wip": stokSpec("stok-furniture-wip", "Stok Furniture WIP", "furniture-wip"),
-  "stok-barang-jadi": stokSpec("stok-barang-jadi", "Stok Barang Jadi", "barang-jadi"),
+  "stok-barang-jadi": {
+    ...stokSpec("stok-barang-jadi", "Stok Barang Jadi", "barang-jadi"),
+    exportKind: "excel",
+  },
   "stok-barang-jadi-v2": {
     kode: "stok-barang-jadi-v2",
     title: "Stock Barang Jadi V2",

@@ -10,6 +10,7 @@ import type {
   LaporanSpec,
 } from "@/components/laporan/laporan-catalog";
 import type { LaporanData } from "@/services/laporan-service";
+import { exportLaporanXlsx } from "@/components/laporan/export-xlsx";
 import { Loader2Icon } from "@/components/dashboard/icons";
 
 const BORDER = "#E2E6EA";
@@ -74,6 +75,7 @@ function cellText(value: unknown): string {
 
 export function LaporanViewer({ spec }: { spec: LaporanSpec }) {
   const isPdf = spec.kind === "pdf";
+  const exportLabel = spec.exportKind === "excel" ? "EXPORT EXCEL" : "EXPORT CSV";
   const [values, setValues] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {};
     for (const field of spec.fields) init[field.key] = resolveDefault(field);
@@ -89,6 +91,29 @@ export function LaporanViewer({ spec }: { spec: LaporanSpec }) {
     () => spec.fields.some((f) => f.type === "select" && f.optionsSource === "warehouse"),
     [spec.fields],
   );
+
+  const totals = useMemo(() => {
+    if (!data || data.rows.length === 0) return null;
+    const firstKey = data.columns[0]?.key;
+    const hasTotalRow = data.rows.some(
+      (r) => String(r[firstKey] ?? "").trim().toUpperCase() === "TOTAL",
+    );
+    if (hasTotalRow) return null;
+    const sums: Record<string, number> = {};
+    const numericKeys = new Set<string>();
+    for (const col of data.columns) {
+      if (/^(id|no)/i.test(col.key)) continue;
+      const vals = data.rows
+        .map((r) => r[col.key])
+        .filter((v) => v != null && v !== "");
+      if (vals.length > 0 && vals.every((v) => typeof v === "number")) {
+        numericKeys.add(col.key);
+        sums[col.key] = vals.reduce<number>((s, v) => s + (v as number), 0);
+      }
+    }
+    if (numericKeys.size === 0) return null;
+    return { sums, numericKeys };
+  }, [data]);
 
   useEffect(() => {
     if (!hasSelect) return;
@@ -145,7 +170,7 @@ export function LaporanViewer({ spec }: { spec: LaporanSpec }) {
       )}
 
       <section
-        className="overflow-hidden rounded-xl border bg-white"
+        className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border bg-white"
         style={{ borderColor: BORDER }}
       >
         <div className="flex flex-wrap items-end gap-3 border-b p-3" style={{ borderColor: BORDER }}>
@@ -220,15 +245,24 @@ export function LaporanViewer({ spec }: { spec: LaporanSpec }) {
 
               <button
                 type="button"
-                title="Unduh data laporan sebagai file CSV"
+                title={
+                  spec.exportKind === "excel"
+                    ? "Unduh data laporan sebagai file Excel (.xlsx)"
+                    : "Unduh data laporan sebagai file CSV"
+                }
                 onClick={() => {
-                  if (data) exportCsv(`${spec.kode}-${todayStr()}.csv`, data);
+                  if (!data) return;
+                  if (spec.exportKind === "excel") {
+                    exportLaporanXlsx(`${spec.kode}-${todayStr()}.xlsx`, data);
+                  } else {
+                    exportCsv(`${spec.kode}-${todayStr()}.csv`, data);
+                  }
                 }}
                 disabled={!data || data.rows.length === 0}
                 className="rounded-lg border px-4 py-2 text-[12px] font-bold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
                 style={{ borderColor: BORDER }}
               >
-                EXPORT CSV
+                {exportLabel}
               </button>
 
               {data && (
@@ -250,7 +284,7 @@ export function LaporanViewer({ spec }: { spec: LaporanSpec }) {
             untuk membuka hasil laporan di tab baru.
           </div>
         ) : (
-          <div className="max-h-[65vh] overflow-auto">
+          <div className="min-h-0 flex-1 overflow-auto">
           <table className="w-full border-collapse text-left text-[12.5px]">
             <thead className="sticky top-0 bg-white">
               <tr style={{ borderBottom: `1px solid ${BORDER}` }}>
@@ -317,6 +351,29 @@ export function LaporanViewer({ spec }: { spec: LaporanSpec }) {
                   </tr>
                 ))}
             </tbody>
+            {totals && data && (
+              <tfoot className="sticky bottom-0 z-10">
+                <tr style={{ borderTop: `2px solid ${BORDER}` }}>
+                  <td
+                    className="whitespace-nowrap px-2 py-1.5 font-bold text-gray-800"
+                    style={{ background: "#EEF2FF" }}
+                  >
+                    TOTAL
+                  </td>
+                  {data.columns.map((col) => (
+                    <td
+                      key={col.key}
+                      className="whitespace-nowrap px-2 py-1.5 font-bold text-gray-800"
+                      style={{ background: "#EEF2FF" }}
+                    >
+                      {totals.numericKeys.has(col.key)
+                        ? cellText(totals.sums[col.key])
+                        : ""}
+                    </td>
+                  ))}
+                </tr>
+              </tfoot>
+            )}
           </table>
           </div>
         )}
@@ -332,8 +389,8 @@ export function LaporanViewer({ spec }: { spec: LaporanSpec }) {
         ) : (
           <>
             Isi filter (tanda <span className="text-[#B91C1C]">*</span> wajib),
-            tekan TAMPILKAN untuk memuat data, lalu EXPORT CSV untuk mengunduh
-            hasilnya.
+            tekan TAMPILKAN untuk memuat data, lalu {exportLabel} untuk
+            mengunduh hasilnya.
           </>
         )}
       </div>

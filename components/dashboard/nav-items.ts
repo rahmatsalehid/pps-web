@@ -63,7 +63,7 @@ const LABEL_CHILDREN: NavItem[] = [
   { label: "Packing", href: "/label/packing", icon: BoxIcon, perm: "label_barangjadi:read" },
   { label: "Reject", href: "/label/reject", icon: TrashIcon, perm: "label_reject:read" },
   { label: "Bahan Pendukung", href: "#", icon: LayersIcon },
-  { label: "Barang Dagang", href: "#", icon: ShoppingCartIcon },
+  { label: "Barang Dagang", href: "/label/barang-dagang", icon: ShoppingCartIcon, perm: "label_barangdagang:read" },
   
 ];
 
