@@ -176,7 +176,7 @@ export const LAPORAN_KATEGORI: LaporanKategori[] = [
       { title: "Semua Label", kode: "semua-label" },
       { title: "Rekap Produksi Harian", kode: "rekap-harian" },
       { title: "Dashboard Produktifitas", kode: "dashboard-produktifitas" },
-      { title: "Hasil Produksi", kode: "hasil-produksi" },
+      { title: "Hasil Produksi Barang Jadi", kode: "hasil-produksi" },
       { title: "Produktivitas Washing", kode: "produktivitas-washing" },
       { title: "Produktivitas Broker", kode: "produktivitas-broker" },
       { title: "Laporan Bongkar Susun", kode: "bongkar-susun" },
@@ -383,8 +383,9 @@ export const LAPORAN_REGISTRY: Record<string, LaporanSpec> = {
   },
   "hasil-produksi": {
     kode: "hasil-produksi",
-    title: "Hasil Produksi",
-    endpoint: "/laporan/hasil-produksi",
+    title: "Hasil Produksi Barang Jadi",
+    endpoint: "",
+    kind: "pdf",
     fields: MUTASI_FIELDS,
   },
   "produktivitas-washing": {

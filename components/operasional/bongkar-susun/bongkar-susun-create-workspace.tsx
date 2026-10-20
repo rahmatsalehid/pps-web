@@ -33,6 +33,7 @@ const TOLERANCE = 0.001;
 
 const ACCEPTED_LABELS = [
   { prefix: "A", label: "Bahan Baku" },
+  { prefix: "AB", label: "Bahan Baku Pakai" },
   { prefix: "B", label: "Washing" },
   { prefix: "D", label: "Broker" },
   { prefix: "M", label: "Bonggolan" },

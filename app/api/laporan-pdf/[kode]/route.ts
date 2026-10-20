@@ -11,6 +11,8 @@ const PDF_SOURCES: Record<string, (search: string) => string> = {
     `${REPORT_API_URL}/api/bongkar-susun-v2/laporan/pdf${search}`,
   "sortir-reject": (search) =>
     `${REPORT_API_URL}/api/sortir-reject-v2/laporan/pdf${search}`,
+  "hasil-produksi": (search) =>
+    `${BACKEND_API_URL}/api/laporan/barang-jadi/hasil-produksi/pdf${search}`,
   "stok-broker-qc": (search) =>
     `${BACKEND_API_URL}/api/laporan/broker/stok-qc/pdf${search}`,
   "stok-barang-jadi-v2": (search) =>

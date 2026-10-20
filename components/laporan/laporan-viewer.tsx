@@ -227,7 +227,7 @@ export function LaporanViewer({ spec }: { spec: LaporanSpec }) {
               className="flex items-center gap-2 rounded-lg px-4 py-2 text-[12px] font-bold text-white"
               style={{ background: PRIMARY }}
             >
-              BUKA PDF
+              TAMPILKAN
             </button>
           ) : (
             <>
@@ -279,7 +279,7 @@ export function LaporanViewer({ spec }: { spec: LaporanSpec }) {
             Laporan ini berbentuk PDF. Isi filter (tanda{" "}
             <span className="text-[#B91C1C]">*</span> wajib), lalu tekan{" "}
             <span className="font-bold" style={{ color: PRIMARY }}>
-              BUKA PDF
+              TAMPILKAN
             </span>{" "}
             untuk membuka hasil laporan di tab baru.
           </div>
@@ -384,7 +384,7 @@ export function LaporanViewer({ spec }: { spec: LaporanSpec }) {
         {isPdf ? (
           <>
             Isi filter (tanda <span className="text-[#B91C1C]">*</span> wajib),
-            lalu tekan BUKA PDF untuk membuka laporan di tab baru.
+            lalu tekan TAMPILKAN untuk membuka laporan di tab baru.
           </>
         ) : (
           <>

@@ -33,7 +33,7 @@ const CATEGORY_CODES: Record<string, string> = {
   mixer: "H.",
   furnitureWip: "BB.",
   barangJadi: "BA.",
-  bahanBaku: "A.",
+  bahanBaku: "A. / AB.",
   bonggolan: "M.",
   reject: "BF.",
 };
