@@ -270,3 +270,39 @@ export async function deleteCetakanWarna(
   });
   await expectOk(res.status, res.data, "Gagal menghapus data cetakan");
 }
+
+// ── Master baru (dari form Tambah) ───────────────────────────────────────────
+
+export async function createCetakanBaru(
+  token: string | undefined,
+  namaCetakan: string,
+): Promise<CetakanOption> {
+  const t = requireToken(token);
+  const res = await apiFetchAuth<{
+    success?: boolean;
+    message?: string;
+    data?: Record<string, unknown>;
+  }>("/mst-cetakan/new-cetakan", t, {
+    method: "POST",
+    body: JSON.stringify({ namaCetakan }),
+  });
+  await expectOk(res.status, res.data, "Gagal menambah cetakan baru");
+  return parseCetakan(res.data?.data ?? {});
+}
+
+export async function createWarnaBaru(
+  token: string | undefined,
+  warna: string,
+): Promise<WarnaOption> {
+  const t = requireToken(token);
+  const res = await apiFetchAuth<{
+    success?: boolean;
+    message?: string;
+    data?: Record<string, unknown>;
+  }>("/mst-cetakan/new-warna", t, {
+    method: "POST",
+    body: JSON.stringify({ warna }),
+  });
+  await expectOk(res.status, res.data, "Gagal menambah warna baru");
+  return parseWarna(res.data?.data ?? {});
+}

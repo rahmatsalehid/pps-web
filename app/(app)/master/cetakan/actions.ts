@@ -4,7 +4,9 @@ import { cookies } from "next/headers";
 import { AUTH_TOKEN_COOKIE } from "@/services/auth-service";
 import { ApiRequestError } from "@/services/api";
 import {
+  createCetakanBaru,
   createCetakanWarna,
+  createWarnaBaru,
   deleteCetakanWarna,
   fetchCetakanWarnaDetail,
   fetchCetakanWarnaList,
@@ -78,6 +80,27 @@ export async function deleteCetakanAction(key: CetakanWarnaKey) {
     const token = await getToken();
     await deleteCetakanWarna(token, key);
     return { ok: true as const };
+  } catch (e) {
+    return { ok: false as const, error: errMsg(e) };
+  }
+}
+
+export async function createCetakanBaruAction(namaCetakan: string) {
+  try {
+    const token = await getToken();
+    return {
+      ok: true as const,
+      cetakan: await createCetakanBaru(token, namaCetakan),
+    };
+  } catch (e) {
+    return { ok: false as const, error: errMsg(e) };
+  }
+}
+
+export async function createWarnaBaruAction(warna: string) {
+  try {
+    const token = await getToken();
+    return { ok: true as const, warna: await createWarnaBaru(token, warna) };
   } catch (e) {
     return { ok: false as const, error: errMsg(e) };
   }

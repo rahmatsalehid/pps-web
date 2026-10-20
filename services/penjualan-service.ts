@@ -474,3 +474,28 @@ export async function deletePenjualanItem(
     throw new ApiRequestError(serverMsg(res.data, `Gagal menghapus item (${res.status})`));
   }
 }
+
+/**
+ * DELETE /penjualan/:noBJJual — hapus DO beserta seluruh label terkait
+ * (BJJual_h, BJJualItem_d, BJJualScan_d, BarangJadiPartial; termasuk
+ * kategori furniturewip & barangdagang). DateUsage pada label yang sudah
+ * terpakai/dimatikan dikosongkan (NULL) agar aktif kembali. Cascade dilakukan backend dalam
+ * satu transaksi; butuh permission penjualan:delete.
+ */
+export async function deletePenjualan(
+  token: string | undefined,
+  noBJJual: string,
+): Promise<void> {
+  const t = requireToken(token);
+  const res = await apiFetchAuth<{ message?: string }>(
+    `/penjualan/${encodeURIComponent(noBJJual)}`,
+    t,
+    { method: "DELETE" },
+  );
+  if (res.status === 403) {
+    throw new ApiRequestError("Anda tidak punya akses menghapus Penjualan.");
+  }
+  if (res.status < 200 || res.status >= 300) {
+    throw new ApiRequestError(serverMsg(res.data, `Gagal menghapus penjualan (${res.status})`));
+  }
+}

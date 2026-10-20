@@ -144,9 +144,11 @@ function FilterDialog({
 export function PenjualanWorkspace({
   canScan,
   canCreate = false,
+  canDelete = false,
 }: {
   canScan: boolean;
   canCreate?: boolean;
+  canDelete?: boolean;
 }) {
   const [items, setItems] = useState<PenjualanHeader[]>([]);
   const [page, setPage] = useState(1);
@@ -154,6 +156,9 @@ export function PenjualanWorkspace({
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  // Server kadang menyaring status per halaman sehingga totalPages tidak
+  // akurat; terus coba halaman berikutnya sampai ada halaman kosong.
+  const [exhausted, setExhausted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [searchInput, setSearchInput] = useState("");
@@ -199,6 +204,7 @@ export function PenjualanWorkspace({
         setPage(res.page);
         setTotalPages(res.totalPages);
         setTotal(res.total);
+        setExhausted(res.items.length === 0);
         setError(null);
       } else {
         setItems([]);
@@ -211,13 +217,17 @@ export function PenjualanWorkspace({
   }, [buildParams, reloadKey]);
 
   async function loadMore() {
-    if (loadingMore || page >= totalPages) return;
+    if (loadingMore || exhausted) return;
     setLoadingMore(true);
     const res = await getPenjualanListAction(buildParams(page + 1));
     setLoadingMore(false);
     if (res.ok) {
-      setItems((prev) => [...prev, ...res.items]);
-      setPage(res.page);
+      if (res.items.length === 0) setExhausted(true);
+      setItems((prev) => {
+        const seen = new Set(prev.map((h) => h.noBJJual));
+        return [...prev, ...res.items.filter((h) => !seen.has(h.noBJJual))];
+      });
+      setPage(Math.max(res.page, page + 1));
       setTotalPages(res.totalPages);
       setTotal(res.total);
     }
@@ -225,11 +235,31 @@ export function PenjualanWorkspace({
 
   const refresh = () => setReloadKey((k) => k + 1);
 
+  // Refresh senyap (setelah scan/ubah item): muat ulang halaman yang sudah
+  // terbuka tanpa spinner agar posisi scroll & daftar tidak reset.
+  async function silentRefresh() {
+    const pages = Array.from({ length: page }, (_, i) => i + 1);
+    const results = await Promise.all(
+      pages.map((p) => getPenjualanListAction(buildParams(p))),
+    );
+    if (results.some((r) => !r.ok)) return;
+    const oks = results.filter((r) => r.ok);
+    const last = oks[oks.length - 1];
+    if (!last) return;
+    const seen = new Set<string>();
+    const merged = oks
+      .flatMap((r) => r.items)
+      .filter((h) => !seen.has(h.noBJJual) && !!seen.add(h.noBJJual));
+    setItems(merged);
+    setTotalPages(last.totalPages);
+    setTotal(last.total);
+  }
+
   // Infinite scroll: sentinel di dasar daftar. IntersectionObserver bekerja
   // baik daftar yang di-scroll sendiri maupun halaman yang di-scroll, dan
   // memuat lagi bila 20 data belum memenuhi panel.
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const hasMore = page < totalPages;
+  const hasMore = !exhausted && (page < totalPages || items.length > 0);
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el || !hasMore || loading || loadingMore) return;
@@ -417,8 +447,13 @@ export function PenjualanWorkspace({
             noBJJual={selected}
             canScan={canScan}
             canCreate={canCreate}
-            onChanged={refresh}
-            onCompleted={refresh}
+            canDelete={canDelete}
+            onDeleted={() => {
+              setSelected(null);
+              refresh();
+            }}
+            onChanged={() => void silentRefresh()}
+            onCompleted={() => void silentRefresh()}
           />
         ) : (
           <div className="flex h-full items-center justify-center p-6 text-center text-sm text-gray-400">

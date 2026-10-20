@@ -16,6 +16,7 @@ import {
 import { PenjualanScanDialog } from "./penjualan-scan-dialog";
 import {
   PenjualanAddItemDialog,
+  PenjualanDeleteDialog,
   PenjualanDeleteItemDialog,
   PenjualanEditPcsDialog,
 } from "./penjualan-item-dialogs";
@@ -146,6 +147,8 @@ export function PenjualanDetailPanel({
   noBJJual,
   canScan,
   canCreate = false,
+  canDelete = false,
+  onDeleted,
   onCompleted,
   onChanged,
 }: {
@@ -153,6 +156,10 @@ export function PenjualanDetailPanel({
   canScan: boolean;
   /** Boleh tambah/ubah/hapus item (penjualan:create). */
   canCreate?: boolean;
+  /** Boleh hapus seluruh penjualan (penjualan:delete). */
+  canDelete?: boolean;
+  /** Penjualan terhapus → tutup panel & muat ulang daftar. */
+  onDeleted?: () => void;
   /** Semua turnover terpenuhi setelah scan → daftar perlu dimuat ulang. */
   onCompleted: () => void;
   /** Ada scan berhasil (progres berubah). */
@@ -163,6 +170,7 @@ export function PenjualanDetailPanel({
   const [error, setError] = useState<string | null>(null);
   const [scanOpen, setScanOpen] = useState(false);
   const [itemAction, setItemAction] = useState<ItemAction | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const load = useCallback(async () => {
     const res = await getPenjualanDetailAction(noBJJual);
@@ -255,6 +263,15 @@ export function PenjualanDetailPanel({
           >
             <RotateCcwIcon className="h-4 w-4" />
           </button>
+          {canDelete && (
+            <button
+              type="button"
+              onClick={() => setDeleteOpen(true)}
+              className="rounded-full border border-red-200 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50"
+            >
+              Hapus Penjualan
+            </button>
+          )}
         </div>
 
         <div className="rounded-xl border bg-white p-4" style={{ borderColor: BORDER }}>
@@ -382,6 +399,14 @@ export function PenjualanDetailPanel({
         />
       )}
 
+      {deleteOpen && (
+        <PenjualanDeleteDialog
+          noBJJual={noBJJual}
+          scannedPcs={lines.reduce((s, l) => s + l.pcsScanned, 0)}
+          onDeleted={() => onDeleted?.()}
+          onClose={() => setDeleteOpen(false)}
+        />
+      )}
       {itemAction === "add" && (
         <PenjualanAddItemDialog
           noBJJual={noBJJual}

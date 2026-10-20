@@ -2,6 +2,8 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import {
+  createCetakanBaruAction,
+  createWarnaBaruAction,
   deleteCetakanAction,
   getCetakanDetailAction,
   getCetakanListAction,
@@ -73,6 +75,11 @@ export function CetakanWarnaWorkspace({
   const [detailLoading, setDetailLoading] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
+  // Tambah master Cetakan / Warna baru langsung dari form Tambah
+  const [newKind, setNewKind] = useState<"cetakan" | "warna" | null>(null);
+  const [newName, setNewName] = useState("");
+  const [newBusy, setNewBusy] = useState(false);
+
   const [bjPick, setBjPick] = useState("");
   const [wipPick, setWipPick] = useState("");
   const [bjSel, setBjSel] = useState<number | null>(null);
@@ -118,6 +125,60 @@ export function CetakanWarnaWorkspace({
 
   const inputActive = mode !== "view";
 
+  async function submitNewMaster() {
+    if (!newKind) return;
+    const nama = newName.trim();
+    if (!nama) {
+      setError(`Nama ${newKind} baru wajib diisi`);
+      return;
+    }
+    setNewBusy(true);
+    setError(null);
+    if (newKind === "cetakan") {
+      const res = await createCetakanBaruAction(nama);
+      setNewBusy(false);
+      if (!res.ok) {
+        setError(res.error);
+        return;
+      }
+      const c = res.cetakan;
+      setOptions((o) =>
+        o
+          ? {
+              ...o,
+              cetakan: [...o.cetakan, c].sort((a, b) =>
+                a.namaCetakan.localeCompare(b.namaCetakan),
+              ),
+            }
+          : o,
+      );
+      setForm((f) => ({ ...f, idCetakan: String(c.idCetakan) }));
+      setNotice(`Cetakan "${c.namaCetakan}" ditambahkan ke master`);
+    } else {
+      const res = await createWarnaBaruAction(nama);
+      setNewBusy(false);
+      if (!res.ok) {
+        setError(res.error);
+        return;
+      }
+      const w = res.warna;
+      setOptions((o) =>
+        o
+          ? {
+              ...o,
+              warna: [...o.warna, w].sort((a, b) =>
+                a.warna.localeCompare(b.warna),
+              ),
+            }
+          : o,
+      );
+      setForm((f) => ({ ...f, idWarna: String(w.idWarna) }));
+      setNotice(`Warna "${w.warna}" ditambahkan ke master`);
+    }
+    setNewKind(null);
+    setNewName("");
+  }
+
   function reload() {
     setReloadKey((k) => k + 1);
   }
@@ -129,6 +190,8 @@ export function CetakanWarnaWorkspace({
   }
 
   function resetForm() {
+    setNewKind(null);
+    setNewName("");
     setMode("view");
     setForm(emptyForm());
     setSelectedKey(null);
@@ -453,6 +516,18 @@ export function CetakanWarnaWorkspace({
                     </option>
                   ))}
                 </select>
+                {mode === "create" && canCreate && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewKind("cetakan");
+                      setNewName("");
+                    }}
+                    className="mt-1 text-[11px] font-semibold text-[#0B3B6F] hover:underline"
+                  >
+                    + Cetakan baru (tidak ada di daftar)
+                  </button>
+                )}
               </Field>
               <Field label="Warna" required>
                 <select
@@ -471,6 +546,18 @@ export function CetakanWarnaWorkspace({
                     </option>
                   ))}
                 </select>
+                {mode === "create" && canCreate && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewKind("warna");
+                      setNewName("");
+                    }}
+                    className="mt-1 text-[11px] font-semibold text-[#0B3B6F] hover:underline"
+                  >
+                    + Warna baru (tidak ada di daftar)
+                  </button>
+                )}
               </Field>
               <Field label="Material (opsional)">
                 <select
@@ -494,6 +581,53 @@ export function CetakanWarnaWorkspace({
                 </select>
               </Field>
             </div>
+            {newKind && (
+              <div
+                className="mt-2 flex flex-wrap items-end gap-2 rounded-lg border bg-gray-50 p-2"
+                style={{ borderColor: BORDER }}
+              >
+                <div className="min-w-[14rem] flex-1">
+                  <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                    {newKind === "cetakan" ? "Nama Cetakan Baru" : "Nama Warna Baru"}
+                  </span>
+                  <input
+                    type="text"
+                    value={newName}
+                    maxLength={newKind === "cetakan" ? 50 : 15}
+                    autoFocus
+                    onChange={(e) => setNewName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        void submitNewMaster();
+                      }
+                    }}
+                    className="w-full rounded-lg border bg-white px-3 py-2 text-[13px] uppercase outline-none focus:ring-2"
+                    style={{ borderColor: BORDER }}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void submitNewMaster()}
+                  disabled={newBusy}
+                  className="rounded-lg bg-[#0B3B6F] px-3 py-2 text-[12px] font-bold text-white disabled:opacity-50"
+                >
+                  {newBusy ? "Menyimpan…" : "Simpan ke Master"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewKind(null);
+                    setNewName("");
+                  }}
+                  disabled={newBusy}
+                  className="rounded-lg border bg-white px-3 py-2 text-[12px] font-bold text-gray-600"
+                  style={{ borderColor: BORDER }}
+                >
+                  Batal
+                </button>
+              </div>
+            )}
 
             <p className="mt-2 text-[11.5px] leading-relaxed text-gray-500">
               Isi berurutan: pilih Cetakan dan Warna lebih dulu, lalu tambahkan

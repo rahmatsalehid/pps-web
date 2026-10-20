@@ -6,6 +6,7 @@ import { ApiRequestError } from "@/services/api";
 import {
   addPenjualanItem,
   createPenjualan,
+  deletePenjualan,
   deletePenjualanItem,
   fetchPenjualanDetail,
   fetchPenjualanList,
@@ -182,6 +183,17 @@ export async function printPenjualanParentLabelAction(
         /* best-effort */
       }
     }
+    return { ok: false as const, error: errMsg(e) };
+  }
+}
+
+/** Hapus seluruh penjualan beserta label scan/partial (cascade di backend). */
+export async function deletePenjualanAction(noBJJual: string) {
+  try {
+    const token = await getToken();
+    await deletePenjualan(token, noBJJual);
+    return { ok: true as const };
+  } catch (e) {
     return { ok: false as const, error: errMsg(e) };
   }
 }

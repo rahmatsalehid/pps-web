@@ -2,11 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { SessionUser } from "@/services/auth-service";
 import { Clock } from "./clock";
 import { ChevronLeftIcon, ChevronRightIcon } from "./icons";
-import { resolveNavMeta } from "./nav-breadcrumb";
+import {
+  BREADCRUMB_EXTRA_EVENT,
+  resolveNavMeta,
+  type BreadcrumbExtra,
+} from "./nav-breadcrumb";
 import { NotificationsMenu } from "./notifications-menu";
 import { UserMenu } from "./user-menu";
 
@@ -22,7 +26,35 @@ export function AppHeader({
   onOpenMobileSidebar: () => void;
 }) {
   const pathname = usePathname();
-  const meta = resolveNavMeta(pathname);
+  const baseMeta = resolveNavMeta(pathname);
+  // Crumb tambahan dari halaman (mis. mode Tambah/Ubah), dikirim lewat event
+  const [extra, setExtra] = useState<{
+    path: string;
+    label: string;
+    onBack?: () => void;
+  } | null>(
+    null,
+  );
+  useEffect(() => {
+    const onExtra = (e: Event) => {
+      const detail = (e as CustomEvent<BreadcrumbExtra | null>).detail;
+      setExtra(
+        detail
+          ? {
+              path: window.location.pathname,
+              label: detail.label,
+              onBack: detail.onBack,
+            }
+          : null,
+      );
+    };
+    window.addEventListener(BREADCRUMB_EXTRA_EVENT, onExtra);
+    return () => window.removeEventListener(BREADCRUMB_EXTRA_EVENT, onExtra);
+  }, []);
+  const meta =
+    extra && extra.path === pathname
+      ? { ...baseMeta, crumbs: [...baseMeta.crumbs, { label: extra.label }] }
+      : baseMeta;
   const headerRef = useRef<HTMLElement | null>(null);
 
   // Ukur tinggi header aktual (judul + breadcrumb) → CSS var --header-h
@@ -124,6 +156,10 @@ export function AppHeader({
           {meta.crumbs.map((crumb, i) => {
             const isLast = i === meta.crumbs.length - 1;
             const clickable = Boolean(crumb.href) && !isLast;
+            const onBack =
+              extra && extra.path === pathname && i === meta.crumbs.length - 2
+                ? extra.onBack
+                : undefined;
 
             return (
               <span key={`${crumb.label}-${i}`} className="flex items-center gap-1">
@@ -133,6 +169,14 @@ export function AppHeader({
                 {clickable ? (
                   <Link
                     href={crumb.href!}
+                    onClick={
+                      onBack
+                        ? (e) => {
+                            e.preventDefault();
+                            onBack();
+                          }
+                        : undefined
+                    }
                     className="max-w-[14rem] truncate rounded px-1.5 py-0.5 text-xs font-medium text-slate-500 transition-colors hover:bg-white hover:text-blue-600 hover:underline"
                   >
                     {crumb.label}

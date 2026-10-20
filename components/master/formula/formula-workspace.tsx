@@ -15,6 +15,7 @@ import type {
   MasterItem,
 } from "@/services/master-formula-service";
 import { Loader2Icon } from "@/components/dashboard/icons";
+import { setBreadcrumbExtra } from "@/components/dashboard/nav-breadcrumb";
 
 type EntryMode = "view" | "create" | "edit";
 
@@ -79,6 +80,15 @@ export function FormulaWorkspace({
   const [inputItemPick, setInputItemPick] = useState("");
   const [secondaryKategoriPick, setSecondaryKategoriPick] = useState("");
   const [secondaryItemPick, setSecondaryItemPick] = useState("");
+
+  // Breadcrumb: Dashboard > Master Formula > Tambah/Ubah (Main Output)
+  useEffect(() => {
+    setBreadcrumbExtra(
+      editor ? `${mode === "create" ? "Tambah" : "Ubah"} (Main Output)` : null,
+      resetEditor,
+    );
+    return () => setBreadcrumbExtra(null);
+  }, [editor, mode]);
 
   useEffect(() => {
     let cancelled = false;
@@ -541,11 +551,11 @@ export function FormulaWorkspace({
 
       {editor && (
         <section
-          className="overflow-hidden rounded-xl border bg-white"
+          className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border bg-white"
           style={{ borderColor: BORDER }}
         >
           <header
-            className="flex items-center justify-between gap-2 border-b px-3 py-2.5"
+            className="flex shrink-0 items-center justify-between gap-2 border-b px-3 py-2.5"
             style={{ borderColor: BORDER }}
           >
             <div className="flex items-center gap-2">
@@ -561,8 +571,20 @@ export function FormulaWorkspace({
             </span>
           </header>
 
-          <div className="p-3">
-            <div className="grid grid-cols-2 gap-2">
+          <div className="min-h-0 flex-1 overflow-auto p-3">
+            <div
+              className="rounded-lg border"
+              style={{ borderColor: BORDER }}
+            >
+              <div
+                className="border-b px-3 py-2"
+                style={{ borderColor: BORDER }}
+              >
+                <span className="text-[12px] font-bold text-gray-700">
+                  Main Output
+                </span>
+              </div>
+            <div className="grid grid-cols-2 gap-2 p-3">
               <Field label="ID Formula">
                 <input
                   type="text"
@@ -617,8 +639,10 @@ export function FormulaWorkspace({
                 </Field>
               </div>
             </div>
+            </div>
 
-            <div className="mt-3 rounded-lg border" style={{ borderColor: BORDER }}>
+            <div className="mt-3 grid grid-cols-1 items-start gap-3 lg:grid-cols-2">
+            <div className="rounded-lg border" style={{ borderColor: BORDER }}>
               <div className="flex items-center justify-between border-b px-3 py-2" style={{ borderColor: BORDER }}>
                 <span className="text-[12px] font-bold text-gray-700">
                   Input
@@ -727,7 +751,7 @@ export function FormulaWorkspace({
               </div>
             </div>
 
-            <div className="mt-3 rounded-lg border" style={{ borderColor: BORDER }}>
+            <div className="rounded-lg border" style={{ borderColor: BORDER }}>
               <div className="flex items-center justify-between border-b px-3 py-2" style={{ borderColor: BORDER }}>
                 <span className="text-[12px] font-bold text-gray-700">
                   Secondary Output
@@ -838,10 +862,16 @@ export function FormulaWorkspace({
                 </table>
               </div>
             </div>
+            </div>
 
             <ModeHint mode={mode} kind="formula" />
+          </div>
 
-            <div className="mt-3 grid grid-cols-2 gap-2">
+          <div
+            className="shrink-0 border-t bg-white px-3 py-3"
+            style={{ borderColor: BORDER }}
+          >
+            <div className="grid grid-cols-2 gap-2">
               <ActionButton
                 label={
                   busy ? (

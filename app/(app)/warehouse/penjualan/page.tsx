@@ -17,12 +17,17 @@ export default async function PenjualanPage() {
 
   // Scan/buat DO & edit item butuh penjualan:create (sama dengan tablet).
   let canCreate = false;
+  let canDelete = false;
   try {
     const me = await fetchMyPermissions(token);
     canCreate = hasPermission(me.data.permissions, "penjualan:create");
+    canDelete = hasPermission(me.data.permissions, "penjualan:delete");
   } catch {
     canCreate = false;
+    canDelete = false;
   }
 
-  return <PenjualanWorkspace canScan={canCreate} canCreate={canCreate} />;
+  return <PenjualanWorkspace canScan={canCreate} canCreate={canCreate}
+      canDelete={canDelete}
+    />;
 }

@@ -12,6 +12,23 @@ export type NavMeta = {
   crumbs: BreadcrumbCrumb[];
 };
 
+/** Event window untuk menambah crumb terakhir dari halaman (detail = {label, onBack} | null). */
+export const BREADCRUMB_EXTRA_EVENT = "pps:breadcrumb-extra";
+
+export type BreadcrumbExtra = { label: string; onBack?: () => void };
+
+/** onBack: dipanggil saat crumb induk diklik (kembali ke tampilan awal halaman). */
+export function setBreadcrumbExtra(
+  label: string | null,
+  onBack?: () => void,
+) {
+  window.dispatchEvent(
+    new CustomEvent<BreadcrumbExtra | null>(BREADCRUMB_EXTRA_EVENT, {
+      detail: label ? { label, onBack } : null,
+    }),
+  );
+}
+
 const ROOT_CRUMB: BreadcrumbCrumb = { label: "Dashboard", href: "/" };
 
 function matchHref(pathname: string, href: string): boolean {

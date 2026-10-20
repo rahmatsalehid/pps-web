@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import {
   addPenjualanItemAction,
+  deletePenjualanAction,
   deletePenjualanItemAction,
   getPenjualanMastersAction,
   updatePenjualanItemAction,
@@ -424,6 +425,82 @@ export function PenjualanDeleteItemDialog({
       </p>
       <p className="mt-1 text-xs text-gray-500">
         Baris ini belum memiliki label yang discan.
+      </p>
+      {error && (
+        <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">
+          {error}
+        </p>
+      )}
+    </DialogShell>
+  );
+}
+
+/** Konfirmasi hapus seluruh penjualan + label yang sudah discan. */
+export function PenjualanDeleteDialog({
+  noBJJual,
+  scannedPcs,
+  onDeleted,
+  onClose,
+}: {
+  noBJJual: string;
+  scannedPcs: number;
+  onDeleted: () => void;
+  onClose: () => void;
+}) {
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function confirm() {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    const res = await deletePenjualanAction(noBJJual);
+    setBusy(false);
+    if (!res.ok) {
+      setError(res.error);
+      return;
+    }
+    onDeleted();
+    onClose();
+  }
+
+  return (
+    <DialogShell
+      title="Hapus Penjualan"
+      subtitle={noBJJual}
+      onClose={onClose}
+      footer={
+        <>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={busy}
+            className="rounded-full border px-5 py-2.5 text-sm font-bold text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+            style={{ borderColor: BORDER }}
+          >
+            BATAL
+          </button>
+          <button
+            type="button"
+            onClick={() => void confirm()}
+            disabled={busy}
+            className="inline-flex items-center gap-2 rounded-full bg-red-600 px-6 py-2.5 text-sm font-bold text-white disabled:opacity-50"
+          >
+            {busy && <Loader2Icon className="h-4 w-4 animate-spin" />}
+            HAPUS PENJUALAN
+          </button>
+        </>
+      }
+    >
+      <p className="text-sm text-gray-700">
+        Hapus penjualan <span className="font-bold">{noBJJual}</span> beserta
+        seluruh item dan label yang sudah discan
+        {scannedPcs > 0 ? ` (${scannedPcs} pcs)` : ""}?
+      </p>
+      <p className="mt-1 text-xs text-gray-500">
+        Berlaku untuk Barang Jadi, Furniture WIP, dan Barang Dagang. Label yang
+        sudah terpakai (DateUsage terisi) akan dikembalikan menjadi aktif.
+        Tindakan ini tidak dapat dibatalkan.
       </p>
       {error && (
         <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">
